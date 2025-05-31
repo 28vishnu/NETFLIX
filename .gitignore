@@ -1,0 +1,7 @@
+# API Keys / Sensitive Info (if you move your key out of script.js)
+.env
+config.js
+
+# OS generated files (common across systems, good to include)
+.DS_Store    # macOS specific files
+Thumbs.db    # Windows specific files
