@@ -36,6 +36,7 @@ mongoose.connect(MONGO_URI, { dbName: DB_NAME })
 app.get('/api/movies', async (req, res) => {
     try {
         const movies = await Movie.find({});
+        // If no movies are found, return an empty array, not a 404
         res.json(movies);
     } catch (err) {
         console.error('Error fetching all movies:', err);
@@ -47,6 +48,7 @@ app.get('/api/movies', async (req, res) => {
 app.get('/api/series', async (req, res) => {
     try {
         const series = await Series.find({});
+        // If no series are found, return an empty array, not a 404
         res.json(series);
     } catch (err) {
         console.error('Error fetching all series:', err);
@@ -59,6 +61,7 @@ app.get('/api/movies/:imdbID', async (req, res) => {
     try {
         const movie = await Movie.findOne({ imdbID: req.params.imdbID });
         if (!movie) {
+            // Return 404 if a specific movie by ID is not found
             return res.status(404).json({ message: 'Movie not found' });
         }
         res.json(movie);
@@ -73,6 +76,7 @@ app.get('/api/series/:imdbID', async (req, res) => {
     try {
         const series = await Series.findOne({ imdbID: req.params.imdbID });
         if (!series) {
+            // Return 404 if a specific series by ID is not found
             return res.status(404).json({ message: 'Series not found' });
         }
         res.json(series);
@@ -87,9 +91,11 @@ app.get('/api/movies/genre/:genreName', async (req, res) => {
     try {
         const genre = req.params.genreName;
         // Find movies where the 'Genre' field contains the specified genre (case-insensitive)
-        // Assumes 'Genre' field is a string (e.g., "Action, Sci-Fi") or an array of strings
+        // This assumes 'Genre' field in your Movie model is a string (e.g., "Action, Sci-Fi")
+        // or an array of strings. $regex with $options 'i' handles case-insensitive substring match.
         const movies = await Movie.find({ Genre: { $regex: genre, $options: 'i' } });
         if (movies.length === 0) {
+            // Return 404 if no movies are found for the specific genre
             return res.status(404).json({ message: `No movies found for genre: ${genre}` });
         }
         res.json(movies);
@@ -106,6 +112,7 @@ app.get('/api/series/genre/:genreName', async (req, res) => {
         // Find series where the 'Genre' field contains the specified genre (case-insensitive)
         const series = await Series.find({ Genre: { $regex: genre, $options: 'i' } });
         if (series.length === 0) {
+            // Return 404 if no series are found for the specific genre
             return res.status(404).json({ message: `No series found for genre: ${genre}` });
         }
         res.json(series);
@@ -117,10 +124,11 @@ app.get('/api/series/genre/:genreName', async (req, res) => {
 
 // Route to get trending movies (e.g., for hero section)
 // This currently returns 5 random movies for demonstration.
-// You can modify the query to implement actual trending logic (e.g., based on release date, popularity score, etc.)
+// If no movies are found in the collection, it will return an empty array [].
 app.get('/api/movies/trending', async (req, res) => {
     try {
         const trendingMovies = await Movie.aggregate([{ $sample: { size: 5 } }]);
+        // No explicit 404 here, as an empty array is a valid response for "no trending movies right now"
         res.json(trendingMovies);
     } catch (error) {
         console.error('Error fetching trending movies:', error);
@@ -130,6 +138,7 @@ app.get('/api/movies/trending', async (req, res) => {
 
 // Route to get popular movies
 // This currently returns 10 random movies for demonstration.
+// If no movies are found in the collection, it will return an empty array [].
 app.get('/api/movies/popular', async (req, res) => {
     try {
         const popularMovies = await Movie.aggregate([{ $sample: { size: 10 } }]);
@@ -142,6 +151,7 @@ app.get('/api/movies/popular', async (req, res) => {
 
 // Route to get popular series
 // This currently returns 10 random series for demonstration.
+// If no series are found in the collection, it will return an empty array [].
 app.get('/api/series/popular', async (req, res) => {
     try {
         const popularSeries = await Series.aggregate([{ $sample: { size: 10 } }]);
@@ -177,7 +187,7 @@ app.get('/api/search', async (req, res) => {
     try {
         const movies = await Movie.find({ Title: searchTerm });
         const series = await Series.find({ Title: searchTerm });
-        res.json({ movies, series });
+        res.json({ movies, series }); // Return an object with movies and series arrays
     } catch (error) {
         console.error('Error during search:', error);
         res.status(500).json({ error: 'Failed to perform search', details: error.message });
