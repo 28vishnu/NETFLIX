@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOMContentLoaded event fired!");
 
     // Base URL for your backend API
-    const API_BASE_URL = 'http://localhost:3000/api';
+    // *** YOU MUST CHANGE THIS LINE ***
+    const API_BASE_URL = 'https://netflix-ydfu.onrender.com'; // <--- CHANGE THIS TO YOUR RENDER URL
     // OMDb API Key for fetching hero section details directly
     // This key is loaded from the .env file in the backend, but for the frontend
     // we use the provided key directly as it's client-side.
@@ -169,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const content of heroContentTitles) {
             try {
                 // Fetch from OMDb directly for hero section to get rich details
+                // This still uses the OMDb API Key directly in the frontend, which is fine for this use case.
                 const data = await fetchData(`http://www.omdbapi.com/?t=${encodeURIComponent(content.title)}&plot=full&apikey=${OMDB_API_KEY}`);
                 if (data.Response === 'True') {
                     // Map OMDb data to a consistent structure for hero display
@@ -374,22 +376,22 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchHeroMovies(); // Fetch and render hero movies
             // Note: The genre names here should match the actual genres in your database
             // which are now populated from OMDb and stored as an array of strings.
-            await loadCategorySection('Trending Now (Movies)', `${API_BASE_URL}/movies`, 'movie');
-            await loadCategorySection('Popular Series', `${API_BASE_URL}/series`, 'series');
-            await loadCategorySection('Action Movies', `${API_BASE_URL}/movies/genre/Action`, 'movie'); 
-            await loadCategorySection('Comedy Films', `${API_BASE_URL}/movies/genre/Comedy`, 'movie'); 
-            await loadCategorySection('Drama Series', `${API_BASE_URL}/series/genre/Drama`, 'series'); 
-            await loadCategorySection('Sci-Fi Movies', `${API_BASE_URL}/movies/genre/Sci-Fi`, 'movie'); 
-            await loadCategorySection('Animation Series', `${API_BASE_URL}/series/genre/Animation`, 'series'); 
-            await loadCategorySection('Horror Films', `${API_BASE_URL}/movies/genre/Horror`, 'movie'); 
-            await loadCategorySection('Fantasy Movies', `${API_BASE_URL}/movies/genre/Fantasy`, 'movie'); 
-            await loadCategorySection('Crime Series', `${API_BASE_URL}/series/genre/Crime`, 'series'); 
+            await loadCategorySection('Trending Now (Movies)', `${API_BASE_URL}/api/movies`, 'movie'); // Adjusted endpoint
+            await loadCategorySection('Popular Series', `${API_BASE_URL}/api/series`, 'series'); // Adjusted endpoint
+            await loadCategorySection('Action Movies', `${API_BASE_URL}/api/movies/genre/Action`, 'movie'); // Adjusted endpoint
+            await loadCategorySection('Comedy Films', `${API_BASE_URL}/api/movies/genre/Comedy`, 'movie'); // Adjusted endpoint
+            await loadCategorySection('Drama Series', `${API_BASE_URL}/api/series/genre/Drama`, 'series'); // Adjusted endpoint
+            await loadCategorySection('Sci-Fi Movies', `${API_BASE_URL}/api/movies/genre/Sci-Fi`, 'movie'); // Adjusted endpoint
+            await loadCategorySection('Animation Series', `${API_BASE_URL}/api/series/genre/Animation`, 'series'); // Adjusted endpoint
+            await loadCategorySection('Horror Films', `${API_BASE_URL}/api/movies/genre/Horror`, 'movie'); // Adjusted endpoint
+            await loadCategorySection('Fantasy Movies', `${API_BASE_URL}/api/movies/genre/Fantasy`, 'movie'); // Adjusted endpoint
+            await loadCategorySection('Crime Series', `${API_BASE_URL}/api/series/genre/Crime`, 'series'); // Adjusted endpoint
         } else if (categoryType === 'movie') {
-            await loadCategorySection('All Movies', `${API_BASE_URL}/movies`, 'movie', true); // Full grid for all movies
+            await loadCategorySection('All Movies', `${API_BASE_URL}/api/movies`, 'movie', true); // Full grid for all movies (Adjusted endpoint)
         } else if (categoryType === 'series') {
-            await loadCategorySection('All Series', `${API_BASE_URL}/series`, 'series', true); // Full grid for all series
+            await loadCategorySection('All Series', `${API_BASE_URL}/api/series`, 'series', true); // Full grid for all series (Adjusted endpoint)
         } else if (categoryType === 'mylist') {
-            await loadCategorySection('My List', `${API_BASE_URL}/mylist`, 'movie', true); // My List can contain both, default to movie card type
+            await loadCategorySection('My List', `${API_BASE_URL}/api/mylist`, 'movie', true); // My List can contain both, default to movie card type (Adjusted endpoint)
         }
 
         // hideLoading() is called by fetchData's finally block
@@ -473,7 +475,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             // Fetch details from your backend using imdbID
-            const detail = await fetchData(`${API_BASE_URL}/${type}s/${imdbId}`); // fetchData already handles loading indicator
+            // Adjusted endpoint for detail fetching
+            const detail = await fetchData(`${API_BASE_URL}/api/${type}s/${imdbId}`); // fetchData already handles loading indicator
 
             if (detail) {
                 const overlay = document.createElement('div');
@@ -598,7 +601,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 try {
-                    const searchResults = await fetchData(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
+                    // Adjusted endpoint for search
+                    const searchResults = await fetchData(`${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}`);
                     // hideLoading() is called by fetchData's finally block
 
                     const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
