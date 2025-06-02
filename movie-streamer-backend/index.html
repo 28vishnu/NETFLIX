@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Clone</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Base styles for Netflix-like theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #141414; /* Netflix dark background */
+            color: #e5e5e5; /* Netflix light gray text */
+            overflow-x: hidden; /* Prevent horizontal scroll on body */
+        }
+
+        /* Custom scrollbar-hide for horizontal sections (Netflix style) */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* Header transition and sticky effect */
+        #main-header {
+            transition: background-color 0.3s ease-in-out, transform 0.3s ease-in-out;
+            background-color: transparent; /* Default transparent */
+        }
+        #main-header.scrolled {
+            background-color: #141414; /* Solid background when scrolled */
+        }
+        #main-header.hide-header {
+            transform: translateY(-100%); /* Hides header on scroll down */
+        }
+
+        /* Hero section specific styles for full-bleed background and overlay */
+        #hero-section {
+            height: 85vh; /* Adjust height as needed */
+            min-height: 500px;
+            position: relative;
+            overflow: hidden;
+            margin-top: -64px; /* Adjust for header height to make it full-bleed */
+            padding-top: 64px; /* Push content down to compensate for negative margin */
+            display: flex; /* Ensure flex for centering/positioning slides */
+            align-items: center; /* Vertically center content if needed */
+            justify-content: center; /* Horizontally center content if needed */
+        }
+
+        .hero-slides-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1); /* Smooth cubic-bezier transition */
+        }
+
+        .hero-slide {
+            flex-shrink: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            display: flex;
+            align-items: flex-end; /* Align text content to the bottom */
+        }
+
+        /* Dark overlay for hero section to make text readable */
+        .hero-slide .absolute.inset-0 {
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+        }
+
+        .hero-text-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            padding: 2rem;
+            color: white;
+            z-index: 10;
+            width: 100%;
+            max-width: 800px; /* Limit text width */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7); /* Subtle text shadow for readability */
+        }
+
+        .hero-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 1rem;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 20;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s, opacity 0.3s;
+            opacity: 0.7; /* Slightly transparent by default */
+        }
+
+        .hero-nav-btn:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+            opacity: 1;
+        }
+
+        #hero-prev-btn { left: 1rem; }
+        #hero-next-btn { right: 1rem; }
+
+        .hero-dots-container {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            z-index: 20;
+        }
+
+        .hero-dots-container span {
+            height: 0.5rem;
+            width: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .hero-dots-container span.bg-white {
+            background-color: white;
+        }
+
+        /* Movie card specific styling for hover effects */
+        .movie-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for scale and shadow */
+            box-shadow: 0 0 0 rgba(0,0,0,0); /* Initial no shadow */
+        }
+        .movie-card:hover {
+            transform: scale(1.08); /* Slightly more pronounced scale */
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5); /* Add a subtle shadow on hover */
+            z-index: 20; /* Ensure hovered card is on top */
+        }
+
+        /* Info overlay on movie card hover */
+        .movie-card-info {
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding: 0.75rem; /* Slightly more padding */
+        }
+        .movie-card:hover .movie-card-info {
+            opacity: 1;
+        }
+
+        /* Detail Overlay */
+        .detail-overlay {
+            background-color: rgba(0, 0, 0, 0.95); /* Slightly darker overlay */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0; /* Start hidden */
+            transition: opacity 0.3s ease; /* Fade in/out */
+        }
+        .detail-overlay.active {
+            opacity: 1; /* Show when active */
+        }
+
+        .detail-overlay > div {
+            max-height: 90vh; /* Limit height for scrollability */
+            overflow-y: auto; /* Enable scrolling for content */
+            background-color: #1a1a1a; /* Darker panel background */
+            border-radius: 0.5rem; /* Rounded corners */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.7); /* Stronger shadow */
+            transform: translateY(20px); /* Slight animation on open */
+            transition: transform 0.3s ease;
+        }
+        .detail-overlay.active > div {
+            transform: translateY(0);
+        }
+
+        /* Custom scrollbar for detail overlay */
+        .detail-overlay::-webkit-scrollbar {
+            width: 8px;
+        }
+        .detail-overlay::-webkit-scrollbar-track {
+            background: #2a2a2a;
+            border-radius: 10px;
+        }
+        .detail-overlay::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .detail-overlay::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Loading Indicator Styling */
+        #loading-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent dark overlay */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999; /* Ensure it's on top */
+            color: #e5e5e5;
+            font-size: 1.2rem;
+            transition: opacity 0.3s ease;
+        }
+        #loading-indicator.hidden {
+            opacity: 0;
+            pointer-events: none; /* Allow clicks through when hidden */
+        }
+        #loading-indicator .fa-spinner {
+            color: #e50914; /* Netflix red */
+        }
+    </style>
+</head>
+<body class="bg-[#141414] text-[#e5e5e5]">
+    <header id="main-header" class="fixed top-0 left-0 w-full z-50 p-4 flex items-center justify-between transition-all duration-300">
+        <div class="flex items-center space-x-6">
+            <h1 class="text-red-600 text-3xl font-bold">NETFLIX</h1>
+            <nav>
+                <ul class="flex space-x-4">
+                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors active" data-category-type="home">Home</a></li>
+                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-category-type="movie">Movies</a></li>
+                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-category-type="series">Series</a></li>
+                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-category-type="mylist">My List</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="relative flex items-center">
+                <button id="search-toggle-btn" class="text-white text-xl hover:text-gray-300 transition-colors mr-2">
+                    <i class="fas fa-search"></i>
+                </button>
+                <div id="search-input-wrapper" class="relative hidden">
+                    <input type="text" id="search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-40">
+                </div>
+            </div>
+            <div id="user-details" class="flex items-center space-x-2">
+                <span class="text-sm md:text-base">Guest</span>
+                <img src="https://placehold.co/40x40/FF0000/FFFFFF?text=G" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-white">
+            </div>
+        </div>
+    </header>
+
+    <section id="hero-section" class="relative">
+        <div id="hero-slides-container" class="hero-slides-container">
+            </div>
+        <button id="hero-prev-btn" class="hero-nav-btn left-4"><i class="fas fa-chevron-left"></i></button>
+        <button id="hero-next-btn" class="hero-nav-btn right-4"><i class="fas fa-chevron-right"></i></button>
+        <div id="hero-dots-container" class="hero-dots-container">
+            </div>
+    </section>
+
+    <main class="container mx-auto px-4 py-8">
+        <div id="loading-indicator" class="hidden">
+            <i class="fas fa-spinner fa-spin text-red-600 text-4xl"></i>
+            <p class="mt-4 text-lg">Loading content...</p>
+        </div>
+        <div id="movie-sections" class="relative">
+            </div>
+    </main>
+
+    <div id="detail-overlay-container">
+        </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

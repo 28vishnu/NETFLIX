@@ -1,0 +1,279 @@
+/* Base styles for the body, ensuring consistent font and background */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #141414; /* Deep dark background, similar to Netflix */
+    color: #e5e5e5; /* Light grey text for contrast */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Prevent horizontal scroll on body from content overflow */
+    overflow-x: hidden;
+}
+
+/* Ensure all elements inherit box-sizing */
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+/* --- Global Scrollbar Hiding --- */
+/* Custom scrollbar hiding for a cleaner look, common in streaming UIs */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Hides scrollbar for Webkit browsers (Chrome, Safari) */
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* Hides scrollbar for IE and Edge */
+    scrollbar-width: none;  /* Hides scrollbar for Firefox */
+}
+
+/* --- Header Styling --- */
+#main-header {
+    background-color: rgba(20, 20, 20, 0.9); /* Slightly more opaque background */
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    height: 60px; /* Standard header height */
+    align-items: center;
+}
+
+/* Header scrolled state */
+#main-header.scrolled {
+    background-color: #141414; /* Solid background when scrolled */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* Header hide/show on scroll */
+#main-header.hide-header {
+    transform: translateY(-100%);
+}
+
+/* Navigation links active state */
+.nav-link.active {
+    font-weight: 600; /* Semi-bold for active link */
+    color: #fff; /* White for active link */
+}
+
+/* Search input wrapper animation */
+#search-input-wrapper {
+    transition: width 0.3s ease, opacity 0.3s ease;
+    width: 0; /* Start with 0 width */
+    opacity: 0; /* Start invisible */
+    overflow: hidden; /* Hide overflow during transition */
+}
+
+#search-input-wrapper:not(.hidden) {
+    width: 160px; /* Expand to 160px when visible */
+    opacity: 1; /* Become visible */
+}
+
+/* --- Hero Section Carousel --- */
+#hero-section {
+    width: 100%;
+    height: 60vh; /* Responsive height */
+    max-height: 700px; /* Max height for larger screens */
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #000; /* Fallback background */
+}
+
+.hero-slides-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.5s ease-in-out;
+}
+
+.hero-slide {
+    flex-shrink: 0; /* Prevent slides from shrinking */
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    align-items: flex-end; /* Align content to the bottom */
+}
+
+.hero-slide::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 50%, transparent 100%);
+}
+
+.hero-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    padding: 1rem 0.75rem;
+    cursor: pointer;
+    z-index: 10;
+    font-size: 1.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.3s ease;
+}
+
+.hero-nav-btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.hero-dots-container {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.5rem;
+    z-index: 10;
+}
+
+.hero-dots-container span {
+    display: block;
+    width: 8px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.hero-dots-container span.active {
+    background-color: white;
+}
+
+/* --- Movie Card Styling (for horizontal carousels) --- */
+.movie-card {
+    width: 130px; /* Default card width */
+    height: 195px; /* Maintain 2:3 aspect ratio */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.movie-card img {
+    border-radius: 0.375rem; /* rounded-md */
+}
+
+.movie-card-info {
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 0.5rem;
+    border-bottom-left-radius: 0.375rem;
+    border-bottom-right-radius: 0.375rem;
+}
+
+/* --- Movie Grid Category (for All Movies/Series pages) --- */
+.movie-grid-category {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Smaller cards for mobile grid */
+    gap: 0.5rem; /* Reduced gap for mobile grid */
+}
+
+@media (min-width: 480px) {
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem; /* Reduced gap */
+    }
+}
+
+@media (min-width: 640px) { /* sm breakpoint */
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem; /* Reduced gap */
+    }
+}
+
+@media (min-width: 768px) { /* md breakpoint */
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.25rem;
+    }
+    .movie-card {
+        width: 160px; /* Adjust default card width for md */
+        height: 240px;
+    }
+}
+
+@media (min-width: 1024px) { /* lg breakpoint */
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1.5rem;
+    }
+    .movie-card {
+        width: 180px; /* Adjust default card width for lg */
+        height: 270px;
+    }
+}
+
+@media (min-width: 1280px) { /* xl breakpoint */
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.75rem;
+    }
+    .movie-card {
+        width: 200px; /* Adjust default card width for xl */
+        height: 300px;
+    }
+}
+
+/* --- Detail Overlay --- */
+#detail-overlay-container {
+    opacity: 0;
+    pointer-events: none; /* Allows clicks to pass through when not active */
+    transition: opacity 0.3s ease;
+}
+
+#detail-overlay-container.active {
+    opacity: 1;
+    pointer-events: auto; /* Enables clicks when active */
+}
+
+.detail-overlay-content {
+    background-color: #1a1a1a;
+    border-radius: 0.5rem;
+    max-width: 90%; /* Max width for responsiveness */
+    max-height: 90vh; /* Max height for responsiveness */
+    overflow: hidden; /* Hide scrollbars if content overflows */
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    transform: scale(0.95); /* Slightly scale down when inactive */
+    opacity: 0; /* Start invisible */
+}
+
+#detail-overlay-container.active .detail-overlay-content {
+    transform: scale(1); /* Scale to normal when active */
+    opacity: 1; /* Become visible */
+}
+
+.detail-overlay-content .close-overlay-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    z-index: 10;
+    transition: color 0.2s ease;
+}
+
+.detail-overlay-content .close-overlay-btn:hover {
+    color: #ccc;
+}
+
+/* Responsive adjustments for detail overlay content */
+@media (max-width: 767px) {
+    .detail-overlay-content {
+        flex-direction: column; /* Stack image and details vertically on small screens */
+        max-height: 95vh; /* Allow more height on small screens */
+        overflow-y: auto; /* Enable scrolling for the entire overlay content */
+    }
+    .detail-overlay-content img {
+        width: 100%;
+        height: 250px; /* Fixed height for image on small screens */
+        object-fit: cover;
+    }
+    .detail-overlay-content .p-6 {
+        padding: 1rem; /* Smaller padding on small screens */
+    }
+}
