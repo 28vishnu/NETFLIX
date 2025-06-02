@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const Movie = require('./models/Movie'); // Ensure this path is correct for your Movie model
 const Series = require('./models/Series'); // Ensure this path is correct for your Series model
+const UserList = require('./models/UserList'); // NEW: UserList model
 
 const app = express();
 const PORT = process.env.PORT || 5000; // Use port 5000 for the backend, or environment variable
@@ -33,6 +34,10 @@ mongoose.connect(MONGO_URI, { dbName: DB_NAME })
 // --- API Routes ---
 // IMPORTANT: Order of routes matters! More specific routes should come before general ones.
 
+// ======================================================================================
+// MOVIE ROUTES
+// ======================================================================================
+
 // Route to get trending movies (e.g., for hero section) - placed before :imdbID
 app.get('/api/movies/trending', async (req, res) => {
     try {
@@ -61,6 +66,7 @@ app.get('/api/movies/popular', async (req, res) => {
 app.get('/api/movies/genre/:genreName', async (req, res) => {
     try {
         const genre = req.params.genreName;
+        // Query for movies where the 'genre' field (which is an array) contains the specified genre string, case-insensitive
         const movies = await Movie.find({
             genre: { $in: [new RegExp(genre, 'i')] }
         });
@@ -90,10 +96,10 @@ app.get('/api/movies/:imdbID', async (req, res) => {
     }
 });
 
-// Route to get all movies - placed AFTER specific movie routes, or can be at the top
+// Route to get all movies (should only return documents where type is 'movie')
 app.get('/api/movies', async (req, res) => {
     try {
-        const movies = await Movie.find({});
+        const movies = await Movie.find({ type: 'movie' }); // Ensure only movies are returned
         res.json(movies);
     } catch (err) {
         console.error('Error fetching all movies:', err);
@@ -102,7 +108,9 @@ app.get('/api/movies', async (req, res) => {
 });
 
 
-// --- Series Routes (apply same ordering principle) ---
+// ======================================================================================
+// SERIES ROUTES
+// ======================================================================================
 
 // Route to get popular series - placed before :imdbID
 app.get('/api/series/popular', async (req, res) => {
@@ -115,6 +123,25 @@ app.get('/api/series/popular', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch popular series', details: error.message });
     }
 });
+
+// NEW: Route to get specific "Best Series" titles - placed before :imdbID
+app.get('/api/series/best', async (req, res) => {
+    try {
+        const bestSeriesTitles = [
+            'Breaking Bad', 'Stranger Things', 'House of the Dragon',
+            'Game of Thrones', 'Prison Break'
+        ];
+        // Use $in operator to find series by title, case-insensitive
+        const bestSeries = await Series.find({
+            Title: { $in: bestSeriesTitles.map(title => new RegExp(title, 'i')) }
+        });
+        res.json(bestSeries);
+    } catch (error) {
+        console.error('Error fetching best series:', error);
+        res.status(500).json({ error: 'Failed to fetch best series', details: error.message });
+    }
+});
+
 
 // Route to get series by genre - placed before :imdbID
 app.get('/api/series/genre/:genreName', async (req, res) => {
@@ -148,10 +175,10 @@ app.get('/api/series/:imdbID', async (req, res) => {
     }
 });
 
-// Route to get all series - placed AFTER specific series routes, or can be at the top
+// Route to get all series (should only return documents where type is 'series')
 app.get('/api/series', async (req, res) => {
     try {
-        const series = await Series.find({});
+        const series = await Series.find({ type: 'series' }); // Ensure only series are returned
         res.json(series);
     } catch (err) {
         console.error('Error fetching all series:', err);
@@ -160,19 +187,91 @@ app.get('/api/series', async (req, res) => {
 });
 
 
-// Endpoint for My List (can be placed anywhere as its path is unique)
-app.get('/api/mylist', async (req, res) => {
+// ======================================================================================
+// MY LIST ROUTES (NEW)
+// ======================================================================================
+
+// Get user's list
+app.get('/api/mylist/:userId', async (req, res) => {
     try {
-        const sampleMovies = await Movie.aggregate([{ $sample: { size: 5 } }]);
-        const sampleSeries = await Series.aggregate([{ $sample: { size: 5 } }]);
-        res.json([...sampleMovies, ...sampleSeries]);
+        const userList = await UserList.findOne({ userId: req.params.userId });
+        if (!userList) {
+            // If no list found for user, return an empty list with 200 OK
+            return res.json({ userId: req.params.userId, items: [] });
+        }
+        res.json(userList);
     } catch (error) {
-        console.error('Error fetching my list:', error);
-        res.status(500).json({ error: 'Failed to fetch my list', details: error.message });
+        console.error('Error fetching user list:', error);
+        res.status(500).json({ error: 'Failed to fetch user list', details: error.message });
     }
 });
 
-// Search movies and series by title (can be placed anywhere as its path is unique)
+// Add item to user's list
+app.post('/api/mylist/add', async (req, res) => {
+    const { userId, item } = req.body; // item should contain imdbID, title, poster, type, year
+
+    if (!userId || !item || !item.imdbID || !item.title || !item.type) {
+        return res.status(400).json({ message: 'Missing required fields for adding to list.' });
+    }
+
+    try {
+        let userList = await UserList.findOne({ userId });
+
+        if (!userList) {
+            // Create new list if it doesn't exist
+            userList = new UserList({ userId, items: [] });
+        }
+
+        // Check if item already exists in the list
+        const itemExists = userList.items.some(existingItem => existingItem.imdbID === item.imdbID);
+        if (itemExists) {
+            return res.status(409).json({ message: 'Item already in list.' });
+        }
+
+        userList.items.push(item);
+        await userList.save();
+        res.status(200).json({ message: 'Item added to list successfully.', userList });
+    } catch (error) {
+        console.error('Error adding item to list:', error);
+        res.status(500).json({ error: 'Failed to add item to list', details: error.message });
+    }
+});
+
+// Remove item from user's list
+app.post('/api/mylist/remove', async (req, res) => {
+    const { userId, imdbID } = req.body;
+
+    if (!userId || !imdbID) {
+        return res.status(400).json({ message: 'Missing required fields for removing from list.' });
+    }
+
+    try {
+        let userList = await UserList.findOne({ userId });
+
+        if (!userList) {
+            return res.status(404).json({ message: 'User list not found.' });
+        }
+
+        const initialLength = userList.items.length;
+        userList.items = userList.items.filter(item => item.imdbID !== imdbID);
+
+        if (userList.items.length === initialLength) {
+            return res.status(404).json({ message: 'Item not found in list.' });
+        }
+
+        await userList.save();
+        res.status(200).json({ message: 'Item removed from list successfully.', userList });
+    } catch (error) {
+        console.error('Error removing item from list:', error);
+        res.status(500).json({ error: 'Failed to remove item from list', details: error.message });
+    }
+});
+
+// ======================================================================================
+// GENERAL ROUTES
+// ======================================================================================
+
+// Search movies and series by title, genre, actors, plot
 app.get('/api/search', async (req, res) => {
     const query = req.query.q;
     if (!query) {
@@ -181,9 +280,24 @@ app.get('/api/search', async (req, res) => {
     const searchTerm = new RegExp(query, 'i'); // Case-insensitive search
 
     try {
-        const movies = await Movie.find({ Title: searchTerm });
-        const series = await Series.find({ Title: searchTerm });
-        res.json({ movies, series });
+        // Search across multiple fields using $or
+        const movies = await Movie.find({
+            $or: [
+                { Title: searchTerm },
+                { Plot: searchTerm },
+                { Actors: searchTerm },
+                { Genre: searchTerm } // Will search within genre array/string
+            ]
+        });
+        const series = await Series.find({
+            $or: [
+                { Title: searchTerm },
+                { Plot: searchTerm },
+                { Actors: searchTerm },
+                { Genre: searchTerm } // Will search within genre array/string
+            ]
+        });
+        res.json({ movies, series }); // Return an object with movies and series arrays
     } catch (error) {
         console.error('Error during search:', error);
         res.status(500).json({ error: 'Failed to perform search', details: error.message });

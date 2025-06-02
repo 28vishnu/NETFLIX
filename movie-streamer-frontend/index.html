@@ -48,21 +48,15 @@
             display: flex; /* Ensure flex for centering/positioning slides */
             align-items: center; /* Vertically center content if needed */
             justify-content: center; /* Horizontally center content if needed */
-            
-            /* Properties for smooth hide/show transition */
-            opacity: 1; /* Default to visible */
-            visibility: visible;
-            pointer-events: auto; /* Default to clickable */
-            transition: opacity 0.5s ease-in-out, visibility 0.5s ease-in-out, height 0.5s ease-in-out;
+            transition: opacity 0.5s ease-in-out; /* Smooth hide/show */
         }
-
-        #hero-section.hidden-hero { /* New class to hide with transition */
+        #hero-section.hidden-hero {
             opacity: 0;
-            visibility: hidden;
-            height: 0; /* Collapse height when hidden */
-            pointer-events: none; /* Make element not clickable */
-            /* Overflow hidden is already on #hero-section, but explicitly here for clarity */
-            overflow: hidden;
+            height: 0;
+            min-height: 0;
+            padding-top: 0;
+            margin-top: 0;
+            pointer-events: none; /* Disable interactions when hidden */
         }
 
 
@@ -124,176 +118,135 @@
             opacity: 1;
         }
 
-        /* Movie card specific styles */
+        #hero-prev-btn { left: 1rem; }
+        #hero-next-btn { right: 1rem; }
+
+        .hero-dots-container {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            z-index: 20;
+        }
+
+        .hero-dots-container div { /* Changed from span to div for consistency with script.js */
+            height: 0.5rem;
+            width: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .hero-dots-container div.bg-white { /* Changed from span to div */
+            background-color: white;
+        }
+
+        /* Movie card specific styling for hover effects */
         .movie-card {
-            background-color: #1a1a1a;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-            /* Ensure cards have a defined width for horizontal scrolling */
-            flex-shrink: 0; /* Prevent cards from shrinking */
-            width: 120px; /* Default width for smallest screens */
+            transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for scale and shadow */
+            box-shadow: 0 0 0 rgba(0,0,0,0); /* Initial no shadow */
         }
-        @media (min-width: 640px) { /* sm breakpoint */
-            .movie-card {
-                width: 160px;
-            }
-        }
-        @media (min-width: 768px) { /* md breakpoint */
-            .movie-card {
-                width: 180px;
-            }
-        }
-        @media (min-width: 1024px) { /* lg breakpoint */
-            .movie-card {
-                width: 200px;
-            }
+        .movie-card:hover {
+            transform: scale(1.08); /* Slightly more pronounced scale */
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5); /* Add a subtle shadow on hover */
+            z-index: 20; /* Ensure hovered card is on top */
         }
 
-
+        /* Info overlay on movie card hover */
         .movie-card-info {
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding: 0.75rem; /* Slightly more padding */
         }
-
-        /* Movie section styling */
-        .movie-section {
-            margin-bottom: 2rem;
-        }
-
-        .movie-row {
-            padding-bottom: 1rem; /* Space below each row */
+        .movie-card:hover .movie-card-info {
+            opacity: 1;
         }
 
         /* Detail Overlay */
-        #detail-overlay-container {
+        .detail-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.85); /* Dark semi-transparent background */
-            display: flex; /* Initially hidden via JS, but ready to flex */
-            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.95); /* Slightly darker overlay */
+            display: flex;
             align-items: center;
-            z-index: 1000; /* High z-index to appear above everything */
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0; /* Start hidden */
+            transition: opacity 0.3s ease; /* Fade in/out */
+            pointer-events: none; /* Disable clicks when not active */
         }
-
-        #detail-overlay-container.active {
-            opacity: 1;
-            visibility: visible;
+        .detail-overlay.active {
+            opacity: 1; /* Show when active */
+            pointer-events: auto; /* Enable clicks when active */
         }
 
         .detail-overlay-content {
-            background-color: #1a1a1a;
-            border-radius: 8px;
-            color: white;
-            position: relative;
-            display: flex;
-            flex-direction: row; /* Default for larger screens */
-            max-width: 1000px;
-            max-height: 80vh; /* Adjust max height for scrollability */
-            overflow-y: auto; /* Enable scrolling for content within the overlay */
-            padding: 1.5rem;
-            gap: 1.5rem;
-            transform: scale(0.95);
-            opacity: 0;
-            transition: transform 0.3s ease, opacity 0.3s ease;
+            max-height: 90vh; /* Limit height for scrollability */
+            overflow-y: auto; /* Enable scrolling for content */
+            background-color: #1a1a1a; /* Darker panel background */
+            border-radius: 0.5rem; /* Rounded corners */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.7); /* Stronger shadow */
+            transform: translateY(20px); /* Slight animation on open */
+            transition: transform 0.3s ease;
+        }
+        .detail-overlay.active .detail-overlay-content {
+            transform: translateY(0);
         }
 
-        #detail-overlay-container.active .detail-overlay-content {
-            transform: scale(1);
-            opacity: 1;
+        /* Custom scrollbar for detail overlay */
+        .detail-overlay-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        .detail-overlay-content::-webkit-scrollbar-track {
+            background: #2a2a2a;
+            border-radius: 10px;
+        }
+        .detail-overlay-content::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .detail-overlay-content::-webkit-scrollbar-thumb:hover {
+            background: #555;
         }
 
-        .detail-overlay-content .close-overlay-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 2rem;
-            cursor: pointer;
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            z-index: 10;
-            transition: color 0.2s ease;
-        }
-
-        .detail-overlay-content .close-overlay-btn:hover {
-            color: #ccc;
-        }
-
-        /* Responsive adjustments for detail overlay content */
-        @media (max-width: 767px) {
-            .detail-overlay-content {
-                flex-direction: column; /* Stack image and details vertically on small screens */
-                max-height: 95vh; /* Allow more height on small screens */
-                overflow-y: auto; /* Ensure scrolling works if content is too long */
-            }
-            .detail-content-poster {
-                width: 100%; /* Full width for poster on small screens */
-                display: flex; /* Use flex to center image */
-                justify-content: center;
-            }
-            .detail-content-poster img {
-                width: 70%; /* Make image smaller within its full-width container */
-                height: auto;
-            }
-        }
-
-        /* Loading Indicator Styles */
+        /* Loading Indicator Styling */
         #loading-indicator {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.8);
+            background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent dark overlay */
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            z-index: 9999;
-            transition: opacity 0.3s ease; /* Smooth fade in/out */
+            justify-content: center;
+            z-index: 9999; /* Ensure it's on top */
+            color: #e5e5e5;
+            font-size: 1.2rem;
+            transition: opacity 0.3s ease;
         }
-
         #loading-indicator.hidden {
             opacity: 0;
             pointer-events: none; /* Allow clicks through when hidden */
         }
-
-        .spinner {
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-top: 4px solid #e50914; /* Netflix red */
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
+        #loading-indicator .fa-spinner {
+            color: #e50914; /* Netflix red */
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Message Box */
+        /* Message Box Styling */
         #message-box {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 9999;
-            opacity: 0;
-            transition: opacity 0.3s ease-in-out;
-            pointer-events: none; /* Allow clicks through when not visible */
+            transition: opacity 0.3s ease;
         }
-
         #message-box.show {
             opacity: 1;
-            pointer-events: auto; /* Enable clicks when visible */
         }
 
         /* Mobile Navigation Overlay */
@@ -303,13 +256,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.95); /* Darker overlay */
-            z-index: 100; /* Below detail overlay, above main content */
+            background-color: rgba(0, 0, 0, 0.95);
+            z-index: 90;
             display: flex;
             flex-direction: column;
-            justify-content: center;
             align-items: center;
-            transform: translateX(-100%); /* Start off-screen to the left */
+            justify-content: center;
+            transform: translateX(100%); /* Start off-screen to the right */
             transition: transform 0.3s ease-in-out;
         }
 
@@ -317,125 +270,120 @@
             transform: translateX(0); /* Slide in */
         }
 
-        #mobile-nav-overlay .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            font-size: 2rem;
-            color: white;
-            cursor: pointer;
+        #mobile-nav-overlay.hidden {
+            display: none; /* Completely hide when not active */
         }
 
-        #mobile-nav-overlay ul {
-            list-style: none;
-            padding: 0;
-            text-align: center;
+        #mobile-nav-overlay .nav-link {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
         }
 
-        #mobile-nav-overlay ul li {
-            margin: 1.5rem 0;
+        /* Hide desktop nav on small screens */
+        @media (max-width: 767px) {
+            #main-header nav {
+                display: none;
+            }
+            #search-input-wrapper {
+                position: absolute;
+                top: 100%; /* Below the header */
+                left: 0;
+                width: 100%;
+                background-color: #141414;
+                padding: 0.5rem 1rem;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+                z-index: 40;
+            }
+            #search-input {
+                width: 100%;
+            }
+            #mobile-menu-toggle {
+                display: block; /* Show mobile menu toggle */
+            }
         }
 
-        #mobile-nav-overlay ul li a {
-            font-size: 1.8rem;
-            color: white;
-            text-decoration: none;
-            transition: color 0.2s;
+        /* Show desktop nav on larger screens */
+        @media (min-width: 768px) {
+            #main-header nav {
+                display: block;
+            }
+            #mobile-menu-toggle {
+                display: none; /* Hide mobile menu toggle */
+            }
+            #search-input-wrapper {
+                position: relative; /* Keep search inline on desktop */
+                top: auto;
+                left: auto;
+                width: auto;
+                background-color: transparent;
+                padding: 0;
+                box-shadow: none;
+            }
         }
-
-        #mobile-nav-overlay ul li a:hover {
-            color: #e50914;
-        }
-
     </style>
 </head>
-<body class="bg-black text-gray-100 font-sans">
-    <header id="main-header" class="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-4 md:px-8 py-3">
+<body class="bg-[#141414] text-[#e5e5e5]">
+    <header id="main-header" class="fixed top-0 left-0 w-full z-50 p-4 flex items-center justify-between transition-all duration-300">
         <div class="flex items-center space-x-6">
-            <button id="mobile-menu-toggle" class="text-white text-2xl md:hidden">
-                <i class="fas fa-bars"></i>
-            </button>
-            <a href="#" class="text-red-600 text-3xl font-bold">NETFLIX</a>
+            <h1 class="text-red-600 text-3xl font-bold">NETFLIX</h1>
             <nav class="hidden md:block"> <ul class="flex space-x-4">
-                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="home">Home</a></li>
-                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="series">Series</a></li>
+                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors active" data-content="home">Home</a></li>
                     <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="movies">Movies</a></li>
+                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="series">Series</a></li>
                     <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="mylist">My List</a></li>
                 </ul>
             </nav>
         </div>
         <div class="flex items-center space-x-4">
-            <div id="search-input-wrapper" class="relative hidden md:block">
-                <input type="text" id="search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600">
+            <div class="relative flex items-center">
+                <button id="search-toggle-btn" class="text-white text-xl hover:text-gray-300 transition-colors mr-2">
+                    <i class="fas fa-search"></i>
+                </button>
+                <div id="search-input-wrapper" class="relative hidden md:block"> <input type="text" id="search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-40">
+                </div>
             </div>
-            <button id="search-toggle-btn" class="text-white text-lg md:hidden">
-                <i class="fas fa-search"></i>
+            <button id="mobile-menu-toggle" class="text-white text-xl md:hidden"> <i class="fas fa-bars"></i>
             </button>
-            <div id="user-details" class="flex items-center space-x-2 cursor-pointer">
-                <img src="https://via.placeholder.com/30" alt="User Avatar" class="rounded-full w-8 h-8">
-                <span>Guest</span>
+            <div id="user-details" class="flex items-center space-x-2">
+                <span class="text-sm md:text-base">Guest</span>
+                <img src="https://placehold.co/40x40/FF0000/FFFFFF?text=G" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-white">
             </div>
         </div>
     </header>
 
     <div id="mobile-nav-overlay" class="hidden">
-        <button class="close-btn" id="mobile-nav-close-btn">&times;</button>
-        <ul>
-            <li><a href="#" class="nav-link" data-content="home">Home</a></li>
-            <li><a href="#" class="nav-link" data-content="series">Series</a></li>
-            <li><a href="#" class="nav-link" data-content="movies">Movies</a></li>
-            <li><a href="#" class="nav-link" data-content="mylist">My List</a></li>
+        <button id="mobile-nav-close-btn" class="absolute top-4 right-4 text-white text-3xl">&times;</button>
+        <ul class="flex flex-col items-center">
+            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors active" data-content="home">Home</a></li>
+            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="movies">Movies</a></li>
+            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="series">Series</a></li>
+            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="mylist">My List</a></li>
         </ul>
     </div>
 
-    <section id="hero-section" class="relative bg-black text-white">
+    <section id="hero-section" class="relative">
         <div id="hero-slides-container" class="hero-slides-container">
             </div>
-
-        <button id="hero-prev-btn" class="hero-nav-btn left-4 hidden md:flex">
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        <button id="hero-next-btn" class="hero-nav-btn right-4 hidden md:flex">
-            <i class="fas fa-chevron-right"></i>
-        </button>
-
-        <div id="hero-dots-container" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
+        <button id="hero-prev-btn" class="hero-nav-btn left-4"><i class="fas fa-chevron-left"></i></button>
+        <button id="hero-next-btn" class="hero-nav-btn right-4"><i class="fas fa-chevron-right"></i></button>
+        <div id="hero-dots-container" class="hero-dots-container">
             </div>
     </section>
 
-    <div id="movie-sections" class="p-4 md:p-8 pt-20">
+    <main class="container mx-auto px-4 py-8">
+        <div id="loading-indicator" class="hidden">
+            <i class="fas fa-spinner fa-spin text-red-600 text-4xl"></i>
+            <p class="mt-4 text-lg">Loading content...</p>
+        </div>
+        <div id="movie-sections" class="relative">
+            </div>
+    </main>
+
+    <div id="detail-overlay-container" class="detail-overlay fixed inset-0 z-40">
         </div>
 
-    <div id="detail-overlay-container" style="display: none;">
-        <div class="detail-overlay-content">
-            <button class="close-overlay-btn" aria-label="Close details">&times;</button>
-            <div class="detail-content-poster flex-shrink-0">
-                <img id="overlay-poster" src="" alt="Poster" class="w-full h-auto rounded-md">
-            </div>
-            <div class="detail-content-info flex-grow">
-                <h2 id="overlay-title" class="text-3xl md:text-4xl font-bold mb-2"></h2>
-                <p id="overlay-plot" class="text-base mb-4"></p>
-                <p class="text-sm"><strong class="text-gray-400">Genre:</strong> <span id="overlay-genre"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Released:</strong> <span id="overlay-released"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">Runtime:</strong> <span id="overlay-runtime"></span></p>
-                <p class="text-sm"><strong class="text-gray-400">IMDb Rating:</strong> <span id="overlay-rating"></span></p>
-                <div class="mt-4 flex space-x-3">
-                    <button class="bg-red-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-red-700 transition-colors flex items-center">
-                        <i class="fas fa-play mr-2"></i> Play
-                    </button>
-                    <button class="bg-gray-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center">
-                        <i class="fas fa-plus mr-2"></i> My List
-                    </button>
-                </div>
-            </div>
+    <div id="message-box" class="fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-semibold text-center z-[9999] opacity-0 transition-opacity duration-300">
         </div>
-    </div>
-
-    <div id="loading-indicator" class="hidden">
-        <div class="spinner"></div>
-    </div>
-
-    <div id="message-box" role="alert" aria-live="assertive"></div>
 
     <script src="script.js"></script>
 </body>
