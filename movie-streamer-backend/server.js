@@ -1,8 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Movie = require('./models/Movie'); // Ensure this path is correct
-const Series = require('./models/Series'); // Ensure this path is correct
+const Movie = require('./models/Movie'); // Ensure this path is correct for your Movie model
+const Series = require('./models/Series'); // Ensure this path is correct for your Series model
 
 const app = express();
 const PORT = process.env.PORT || 5000; // Use port 5000 for the backend, or environment variable
@@ -14,7 +14,7 @@ const DB_NAME = 'NETFLIX'; // Your database name
 // --- Middleware ---
 // Configure CORS to explicitly allow requests from your Netlify frontend
 app.use(cors({
-    origin: 'https://netprooo.netlify.app', // IMPORTANT: This is your Netlify frontend URL
+    origin: 'https://netprooo.netlify.app', // IMPORTANT: This must be your exact Netlify frontend URL
     methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
     credentials: true // Allow sending of cookies/authorization headers if needed
 }));
@@ -38,8 +38,8 @@ app.get('/api/movies', async (req, res) => {
         const movies = await Movie.find({});
         res.json(movies);
     } catch (err) {
-        console.error('Error fetching movies:', err);
-        res.status(500).json({ message: 'Server error fetching movies', error: err.message });
+        console.error('Error fetching all movies:', err);
+        res.status(500).json({ message: 'Server error fetching all movies', error: err.message });
     }
 });
 
@@ -49,8 +49,8 @@ app.get('/api/series', async (req, res) => {
         const series = await Series.find({});
         res.json(series);
     } catch (err) {
-        console.error('Error fetching series:', err);
-        res.status(500).json({ message: 'Server error fetching series', error: err.message });
+        console.error('Error fetching all series:', err);
+        res.status(500).json({ message: 'Server error fetching all series', error: err.message });
     }
 });
 
@@ -79,6 +79,76 @@ app.get('/api/series/:imdbID', async (req, res) => {
     } catch (err) {
         console.error(`Error fetching series with IMDb ID ${req.params.imdbID}:`, err);
         res.status(500).json({ message: 'Server error fetching series', error: err.message });
+    }
+});
+
+// Route to get movies by genre
+app.get('/api/movies/genre/:genreName', async (req, res) => {
+    try {
+        const genre = req.params.genreName;
+        // Find movies where the 'Genre' field contains the specified genre (case-insensitive)
+        // Assumes 'Genre' field is a string (e.g., "Action, Sci-Fi") or an array of strings
+        const movies = await Movie.find({ Genre: { $regex: genre, $options: 'i' } });
+        if (movies.length === 0) {
+            return res.status(404).json({ message: `No movies found for genre: ${genre}` });
+        }
+        res.json(movies);
+    } catch (err) {
+        console.error(`Error fetching movies by genre ${req.params.genreName}:`, err);
+        res.status(500).json({ message: 'Server error fetching movies by genre', error: err.message });
+    }
+});
+
+// Route to get series by genre
+app.get('/api/series/genre/:genreName', async (req, res) => {
+    try {
+        const genre = req.params.genreName;
+        // Find series where the 'Genre' field contains the specified genre (case-insensitive)
+        const series = await Series.find({ Genre: { $regex: genre, $options: 'i' } });
+        if (series.length === 0) {
+            return res.status(404).json({ message: `No series found for genre: ${genre}` });
+        }
+        res.json(series);
+    } catch (err) {
+        console.error(`Error fetching series by genre ${req.params.genreName}:`, err);
+        res.status(500).json({ message: 'Server error fetching series by genre', error: err.message });
+    }
+});
+
+// Route to get trending movies (e.g., for hero section)
+// This currently returns 5 random movies for demonstration.
+// You can modify the query to implement actual trending logic (e.g., based on release date, popularity score, etc.)
+app.get('/api/movies/trending', async (req, res) => {
+    try {
+        const trendingMovies = await Movie.aggregate([{ $sample: { size: 5 } }]);
+        res.json(trendingMovies);
+    } catch (error) {
+        console.error('Error fetching trending movies:', error);
+        res.status(500).json({ error: 'Failed to fetch trending movies', details: error.message });
+    }
+});
+
+// Route to get popular movies
+// This currently returns 10 random movies for demonstration.
+app.get('/api/movies/popular', async (req, res) => {
+    try {
+        const popularMovies = await Movie.aggregate([{ $sample: { size: 10 } }]);
+        res.json(popularMovies);
+    } catch (error) {
+        console.error('Error fetching popular movies:', error);
+        res.status(500).json({ error: 'Failed to fetch popular movies', details: error.message });
+    }
+});
+
+// Route to get popular series
+// This currently returns 10 random series for demonstration.
+app.get('/api/series/popular', async (req, res) => {
+    try {
+        const popularSeries = await Series.aggregate([{ $sample: { size: 10 } }]);
+        res.json(popularSeries);
+    } catch (error) {
+        console.error('Error fetching popular series:', error);
+        res.status(500).json({ error: 'Failed to fetch popular series', details: error.message });
     }
 });
 
