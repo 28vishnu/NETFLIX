@@ -18,23 +18,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const userDetailsSpan = document.querySelector('#user-details span');
     const userProfileImg = document.querySelector('#user-details img');
     const header = document.getElementById('main-header');
+
+    // Select all nav links (both desktop and new mobile bottom nav)
     const navLinks = document.querySelectorAll('.nav-link');
-    const searchToggleBtn = document.getElementById('search-toggle-btn');
-    const searchInputWrapper = document.getElementById('search-input-wrapper');
-    const searchInput = document.getElementById('search-input');
+
+    // Desktop Search Elements
+    const desktopSearchToggleBtn = document.getElementById('search-toggle-btn');
+    const desktopSearchInputWrapper = document.getElementById('search-input-wrapper');
+    const desktopSearchInput = document.getElementById('search-input');
+
+    // Hero Section Elements
     const heroSection = document.getElementById('hero-section');
     const heroSlidesContainer = document.getElementById('hero-slides-container');
     const heroPrevBtn = document.getElementById('hero-prev-btn');
     const heroNextBtn = document.getElementById('hero-next-btn');
     const heroDotsContainer = document.getElementById('hero-dots-container');
+
     const detailOverlayContainer = document.getElementById('detail-overlay-container');
     // messageBox is dynamically created/appended, so no need to get it here initially
 
-    // Mobile Navigation Elements
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-    const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
-    const mobileNavCloseBtn = document.getElementById('mobile-nav-close-btn');
-    const mobileNavLinks = mobileNavOverlay ? mobileNavOverlay.querySelectorAll('.nav-link') : []; // Check if mobileNavOverlay exists
+    // NEW: Mobile Bottom Navigation Search Elements
+    const mobileBottomNav = document.getElementById('mobile-bottom-nav'); // Reference to the bottom nav itself
+    const mobileSearchToggleBtn = document.getElementById('mobile-search-toggle-btn'); // The search icon in the bottom nav
+    const mobileSearchInputWrapper = document.getElementById('mobile-search-input-wrapper'); // The input wrapper for mobile search
+    const mobileSearchInput = document.getElementById('mobile-search-input'); // The actual search input for mobile
 
     // --- Global Variables ---
     let currentHeroSlide = 0;
@@ -535,17 +542,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Hide/show header on scroll down/up
-            if (window.scrollY > lastScrollY && window.scrollY > 200) { // Scroll down
-                header.classList.add('hide-header');
-            } else { // Scroll up
-                header.classList.remove('hide-header');
+            // Only hide header on scroll down if not on mobile (mobile has bottom nav)
+            if (window.innerWidth >= 768) { // Only for desktop/tablet
+                if (window.scrollY > lastScrollY && window.scrollY > 200) { // Scroll down
+                    header.classList.add('hide-header');
+                } else { // Scroll up
+                    header.classList.remove('hide-header');
+                }
             }
             lastScrollY = window.scrollY;
         });
     }
 
-
-    // Navigation links click handler
+    // Navigation links click handler (for both desktop top nav and mobile bottom nav)
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior
@@ -558,128 +567,112 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentType = link.dataset.content;
             loadContent(contentType);
 
-            // Close mobile nav if open
-            if (mobileNavOverlay) {
-                mobileNavOverlay.classList.remove('active');
-                mobileNavOverlay.classList.add('hidden');
-                document.body.classList.remove('overflow-hidden');
+            // Hide mobile search input if it was open
+            if (mobileSearchInputWrapper && !mobileSearchInputWrapper.classList.contains('hidden')) {
+                mobileSearchInputWrapper.classList.add('hidden');
+                mobileSearchInput.value = ''; // Clear input when hiding
             }
         });
     });
 
-    // Mobile menu toggle
-    if (mobileMenuToggle) {
-        mobileMenuToggle.addEventListener('click', () => {
-            if (mobileNavOverlay) {
-                mobileNavOverlay.classList.remove('hidden');
-                mobileNavOverlay.classList.add('active');
-                document.body.classList.add('overflow-hidden'); // Prevent body scroll
-            }
-        });
-    }
-
-    // Close mobile nav
-    if (mobileNavCloseBtn) {
-        mobileNavCloseBtn.addEventListener('click', () => {
-            if (mobileNavOverlay) {
-                mobileNavOverlay.classList.remove('active');
-                // Delay hiding to allow transition
-                setTimeout(() => {
-                    mobileNavOverlay.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden');
-                }, 300);
-            }
-        });
-    }
-
-    // Mobile nav links click handler (inside overlay)
-    mobileNavLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-
-            // Remove 'active' from all mobile nav links
-            mobileNavLinks.forEach(nav => nav.classList.remove('active'));
-            // Add 'active' to the clicked link
-            e.currentTarget.classList.add('active');
-
-            const contentType = link.dataset.content;
-            loadContent(contentType);
-            if (mobileNavOverlay) {
-                mobileNavOverlay.classList.remove('active');
-                // Delay hiding to allow transition
-                setTimeout(() => {
-                    mobileNavOverlay.classList.add('hidden');
-                    document.body.classList.remove('overflow-hidden');
-                }, 300);
-            }
-        });
-    });
-
-    // Search toggle for mobile
-    if (searchToggleBtn && searchInputWrapper && searchInput) {
-        searchToggleBtn.addEventListener('click', () => {
-            searchInputWrapper.classList.toggle('hidden');
-            if (!searchInputWrapper.classList.contains('hidden')) {
-                searchInput.focus(); // Focus on input when shown
+    // Desktop Search toggle and input functionality
+    if (desktopSearchToggleBtn && desktopSearchInputWrapper && desktopSearchInput) {
+        desktopSearchToggleBtn.addEventListener('click', () => {
+            desktopSearchInputWrapper.classList.toggle('hidden');
+            if (!desktopSearchInputWrapper.classList.contains('hidden')) {
+                desktopSearchInput.focus(); // Focus on input when shown
             } else {
-                searchInput.value = ''; // Clear input when hiding
+                desktopSearchInput.value = ''; // Clear input when hiding
                 loadContent('home'); // Reload home content if search is cleared/hidden
             }
         });
-    }
 
-    // Search input functionality
-    if (searchInput && movieSectionsContainer && heroSection) {
-        searchInput.addEventListener('keypress', async (e) => {
+        desktopSearchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
-                const query = searchInput.value.trim();
-                if (query.length > 2) { // Require at least 3 characters for search
-                    movieSectionsContainer.innerHTML = ''; // Clear existing content
-                    heroSection.classList.add('hidden-hero'); // Hide hero during search
-                    clearInterval(heroInterval); // Stop hero carousel
-
-                    try {
-                        const searchResults = await fetchData(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
-                        const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
-
-                        if (allResults.length > 0) {
-                            // Create a new section for search results
-                            const searchSectionDiv = document.createElement('div');
-                            searchSectionDiv.className = 'movie-section mb-8';
-                            searchSectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">Search Results for "${query}"</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
-                            const searchGrid = searchSectionDiv.querySelector('.movie-grid-category');
-
-                            allResults.forEach(item => {
-                                if (item.imdbID && item.type) {
-                                    searchGrid.appendChild(createMovieCard(item));
-                                }
-                            });
-                            movieSectionsContainer.appendChild(searchSectionDiv); // Append the new search section
-                        } else {
-                            const noResultsDiv = document.createElement('div');
-                            noResultsDiv.className = 'movie-section p-4 md:p-8 text-center text-gray-400';
-                            noResultsDiv.innerHTML = `<p>No results found for "${query}".</p>`;
-                            movieSectionsContainer.appendChild(noResultsDiv);
-                        }
-                    } catch (error) {
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'movie-section p-4 md:p-8 pt-20 text-center text-red-500';
-                        errorDiv.innerHTML = `<p>Error performing search for "${query}". Please try again later.</p>`;
-                        movieSectionsContainer.appendChild(errorDiv);
-                        console.error('Search error:', error);
-                    } finally {
-                        hideLoading(); // Ensure loading indicator is hidden after search
-                    }
-                } else {
-                    showMessageBox('Please enter at least 3 characters for search.', 'info');
-                }
-                // Optionally hide search input after search on mobile
-                if (window.innerWidth < 768) { // md breakpoint
-                    searchInputWrapper.classList.add('hidden');
+                await handleSearch(desktopSearchInput.value.trim());
+                // Optionally hide search input after search on desktop
+                if (window.innerWidth >= 768) {
+                    desktopSearchInputWrapper.classList.add('hidden');
                 }
             }
         });
     }
+
+    // NEW: Mobile Search Toggle and Input functionality
+    if (mobileSearchToggleBtn && mobileSearchInputWrapper && mobileSearchInput) {
+        mobileSearchToggleBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent default link behavior for the search icon
+            mobileSearchInputWrapper.classList.toggle('hidden');
+            if (!mobileSearchInputWrapper.classList.contains('hidden')) {
+                mobileSearchInput.focus(); // Focus on input when shown
+            } else {
+                mobileSearchInput.value = ''; // Clear input when hiding
+                loadContent('home'); // Reload home content if search is cleared/hidden
+            }
+
+            // Remove 'active' from other nav links in bottom bar, search becomes active
+            mobileBottomNav.querySelectorAll('.nav-link').forEach(nav => nav.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+        });
+
+        mobileSearchInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                await handleSearch(mobileSearchInput.value.trim());
+                // Hide search input after search on mobile
+                if (window.innerWidth < 768) {
+                    mobileSearchInputWrapper.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+
+    /**
+     * Handles the search logic for both desktop and mobile search inputs.
+     * @param {string} query - The search query.
+     */
+    const handleSearch = async (query) => {
+        if (query.length > 2) { // Require at least 3 characters for search
+            movieSectionsContainer.innerHTML = ''; // Clear existing content
+            heroSection.classList.add('hidden-hero'); // Hide hero during search
+            clearInterval(heroInterval); // Stop hero carousel
+
+            try {
+                const searchResults = await fetchData(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
+                const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
+
+                if (allResults.length > 0) {
+                    // Create a new section for search results
+                    const searchSectionDiv = document.createElement('div');
+                    searchSectionDiv.className = 'movie-section mb-8';
+                    searchSectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">Search Results for "${query}"</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
+                    const searchGrid = searchSectionDiv.querySelector('.movie-grid-category');
+
+                    allResults.forEach(item => {
+                        if (item.imdbID && item.type) {
+                            searchGrid.appendChild(createMovieCard(item));
+                        }
+                    });
+                    movieSectionsContainer.appendChild(searchSectionDiv); // Append the new search section
+                } else {
+                    const noResultsDiv = document.createElement('div');
+                    noResultsDiv.className = 'movie-section p-4 md:p-8 text-center text-gray-400';
+                    noResultsDiv.innerHTML = `<p>No results found for "${query}".</p>`;
+                    movieSectionsContainer.appendChild(noResultsDiv);
+                }
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'movie-section p-4 md:p-8 pt-20 text-center text-red-500';
+                errorDiv.innerHTML = `<p>Error performing search for "${query}". Please try again later.</p>`;
+                movieSectionsContainer.appendChild(errorDiv);
+                console.error('Search error:', error);
+            } finally {
+                hideLoading(); // Ensure loading indicator is hidden after search
+            }
+        } else {
+            showMessageBox('Please enter at least 3 characters for search.', 'info');
+        }
+    };
 
 
     // Hero carousel navigation
@@ -696,6 +689,17 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading();
         movieSectionsContainer.innerHTML = ''; // Clear previous content
 
+        // Hide desktop search input wrapper when changing content type
+        if (desktopSearchInputWrapper && !desktopSearchInputWrapper.classList.contains('hidden')) {
+            desktopSearchInputWrapper.classList.add('hidden');
+            desktopSearchInput.value = '';
+        }
+        // Hide mobile search input wrapper when changing content type
+        if (mobileSearchInputWrapper && !mobileSearchInputWrapper.classList.contains('hidden')) {
+            mobileSearchInputWrapper.classList.add('hidden');
+            mobileSearchInput.value = '';
+        }
+
         // Hide hero section for non-home pages
         if (heroSection) { // Check if heroSection exists
             if (contentType !== 'home') {
@@ -708,7 +712,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log('Hero section is being shown for home page.');
             }
         }
-
 
         try {
             if (contentType === 'home') {

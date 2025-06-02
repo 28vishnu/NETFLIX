@@ -14,6 +14,8 @@
             background-color: #141414; /* Netflix dark background */
             color: #e5e5e5; /* Netflix light gray text */
             overflow-x: hidden; /* Prevent horizontal scroll on body */
+            /* Add padding bottom for mobile to prevent content being hidden by bottom nav */
+            padding-bottom: 0; /* Default for desktop */
         }
 
         /* Custom scrollbar-hide for horizontal sections (Netflix style) */
@@ -249,76 +251,110 @@
             opacity: 1;
         }
 
-        /* Mobile Navigation Overlay */
-        #mobile-nav-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
-            z-index: 90;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transform: translateX(100%); /* Start off-screen to the right */
-            transition: transform 0.3s ease-in-out;
-        }
-
-        #mobile-nav-overlay.active {
-            transform: translateX(0); /* Slide in */
-        }
-
-        #mobile-nav-overlay.hidden {
-            display: none; /* Completely hide when not active */
-        }
-
-        #mobile-nav-overlay .nav-link {
-            font-size: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        /* Hide desktop nav on small screens */
+        /* Mobile specific styles */
         @media (max-width: 767px) {
+            /* Adjust body padding to account for fixed bottom nav */
+            body {
+                padding-bottom: 70px; /* Height of the bottom nav + some margin */
+            }
+
+            /* Hide desktop navigation and search on mobile */
             #main-header nav {
                 display: none;
             }
-            #search-input-wrapper {
+            #main-header #search-toggle-btn {
+                display: none; /* Hide top search toggle as it will be in bottom nav */
+            }
+            #main-header #search-input-wrapper {
+                 /* Hide top search input on mobile */
+                display: none !important; /* Use !important to override default block/hidden behavior */
+            }
+
+            /* Show mobile bottom navigation */
+            #mobile-bottom-nav {
+                display: flex;
+            }
+
+            /* Mobile search input wrapper (if toggled) */
+            #mobile-search-input-wrapper {
                 position: absolute;
-                top: 100%; /* Below the header */
+                bottom: 100%; /* Position above the bottom nav */
                 left: 0;
                 width: 100%;
                 background-color: #141414;
                 padding: 0.5rem 1rem;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-                z-index: 40;
+                box-shadow: 0 -2px 5px rgba(0,0,0,0.5); /* Shadow above */
+                z-index: 55; /* Above bottom nav, below main header */
             }
-            #search-input {
+            #mobile-search-input {
                 width: 100%;
-            }
-            #mobile-menu-toggle {
-                display: block; /* Show mobile menu toggle */
             }
         }
 
-        /* Show desktop nav on larger screens */
+        /* Desktop specific styles */
         @media (min-width: 768px) {
+            /* Show desktop navigation and search */
             #main-header nav {
                 display: block;
             }
-            #mobile-menu-toggle {
-                display: none; /* Hide mobile menu toggle */
+            #main-header #search-toggle-btn {
+                display: block; /* Show desktop search toggle */
             }
-            #search-input-wrapper {
-                position: relative; /* Keep search inline on desktop */
-                top: auto;
-                left: auto;
-                width: auto;
-                background-color: transparent;
-                padding: 0;
-                box-shadow: none;
+            #main-header #search-input-wrapper {
+                display: block; /* Show desktop search input */
             }
+            /* Hide mobile bottom navigation on desktop */
+            #mobile-bottom-nav {
+                display: none;
+            }
+        }
+
+        /* Mobile Bottom Nav Styling */
+        #mobile-bottom-nav {
+            display: none; /* Hidden by default, shown via media query */
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #1a1a1a; /* Darker background than body */
+            border-top: 1px solid #333;
+            padding: 10px 0;
+            z-index: 99;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
+        }
+
+        #mobile-bottom-nav ul {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+        }
+
+        #mobile-bottom-nav li {
+            list-style: none;
+        }
+
+        #mobile-bottom-nav .nav-link {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #e5e5e5;
+            text-decoration: none;
+            font-size: 0.7rem; /* Smaller text for mobile */
+            font-weight: 500;
+            padding: 5px;
+            transition: color 0.2s ease;
+        }
+
+        #mobile-bottom-nav .nav-link i {
+            font-size: 1.2rem; /* Icon size */
+            margin-bottom: 4px;
+        }
+
+        #mobile-bottom-nav .nav-link:hover,
+        #mobile-bottom-nav .nav-link.active {
+            color: #ffffff; /* Brighter on hover/active */
         }
     </style>
 </head>
@@ -336,30 +372,18 @@
         </div>
         <div class="flex items-center space-x-4">
             <div class="relative flex items-center">
-                <button id="search-toggle-btn" class="text-white text-xl hover:text-gray-300 transition-colors mr-2">
+                <button id="search-toggle-btn" class="text-white text-xl hover:text-gray-300 transition-colors mr-2 hidden md:block">
                     <i class="fas fa-search"></i>
                 </button>
                 <div id="search-input-wrapper" class="relative hidden md:block"> <input type="text" id="search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-40">
                 </div>
             </div>
-            <button id="mobile-menu-toggle" class="text-white text-xl md:hidden"> <i class="fas fa-bars"></i>
-            </button>
             <div id="user-details" class="flex items-center space-x-2">
                 <span class="text-sm md:text-base">Guest</span>
                 <img src="https://placehold.co/40x40/FF0000/FFFFFF?text=G" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-white">
             </div>
         </div>
     </header>
-
-    <div id="mobile-nav-overlay" class="hidden">
-        <button id="mobile-nav-close-btn" class="absolute top-4 right-4 text-white text-3xl">&times;</button>
-        <ul class="flex flex-col items-center">
-            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors active" data-content="home">Home</a></li>
-            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="movies">Movies</a></li>
-            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="series">Series</a></li>
-            <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="mylist">My List</a></li>
-        </ul>
-    </div>
 
     <section id="hero-section" class="relative">
         <div id="hero-slides-container" class="hero-slides-container">
@@ -384,6 +408,20 @@
 
     <div id="message-box" class="fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-semibold text-center z-[9999] opacity-0 transition-opacity duration-300">
         </div>
+
+    <nav id="mobile-bottom-nav">
+        <ul>
+            <li><a href="#" class="nav-link active" data-content="home"><i class="fas fa-home"></i>Home</a></li>
+            <li><a href="#" class="nav-link" data-content="movies"><i class="fas fa-film"></i>Movies</a></li>
+            <li><a href="#" class="nav-link" data-content="series"><i class="fas fa-tv"></i>Series</a></li>
+            <li><a href="#" class="nav-link" data-content="mylist"><i class="fas fa-heart"></i>My List</a></li>
+            <li><a href="#" class="nav-link" id="mobile-search-toggle-btn"><i class="fas fa-search"></i>Search</a></li>
+        </ul>
+        <div id="mobile-search-input-wrapper" class="hidden">
+            <input type="text" id="mobile-search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300">
+        </div>
+    </nav>
+
 
     <script src="script.js"></script>
 </body>
