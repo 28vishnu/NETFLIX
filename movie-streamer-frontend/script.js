@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOMContentLoaded event fired!");
 
     // Base URL for your backend API
-    const API_BASE_URL = 'http://localhost:3000/api';
+    const API_BASE_URL = 'https://netflix-ydfu.onrender.com/api';
     // OMDb API Key for fetching hero section details directly
     // This key is loaded from the .env file in the backend, but for the frontend
     // we use the provided key directly as it's client-side.
