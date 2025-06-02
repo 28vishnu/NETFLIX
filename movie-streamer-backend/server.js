@@ -11,9 +11,16 @@ const PORT = process.env.PORT || 5000; // Use port 5000 for the backend, or envi
 const MONGO_URI = 'mongodb+srv://vishnusaketh07:NETFLIX@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const DB_NAME = 'NETFLIX'; // Your database name
 
-// Middleware
-app.use(cors()); // Enable CORS for all routes
-app.use(express.json()); // Enable parsing JSON request bodies
+// --- Middleware ---
+// Configure CORS to explicitly allow requests from your Netlify frontend
+app.use(cors({
+    origin: 'https://netprooo.netlify.app', // IMPORTANT: This is your Netlify frontend URL
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Specify allowed HTTP methods
+    credentials: true // Allow sending of cookies/authorization headers if needed
+}));
+
+// Enable parsing JSON request bodies
+app.use(express.json());
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URI, { dbName: DB_NAME })
