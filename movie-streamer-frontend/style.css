@@ -107,6 +107,8 @@ body {
     filter: brightness(0.6); /* Darken the background image */
     z-index: 0;
     transition: background-image 0.7s ease-in-out;
+    /* Use a CSS variable for the background image, set by JavaScript */
+    background-image: var(--hero-bg-image, url('https://placehold.co/1920x1080/000000/FFFFFF?text=Loading+Hero'));
 }
 
 .hero-slides-container {
@@ -123,8 +125,7 @@ body {
     flex-shrink: 0;
     width: 100%;
     height: 100%;
-    background-size: cover;
-    background-position: center;
+    /* Removed background-image properties from here, handled by #hero-section::before */
     position: relative;
     display: flex;
     align-items: flex-end; /* Align text content to the bottom */
