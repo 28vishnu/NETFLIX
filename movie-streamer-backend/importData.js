@@ -7,7 +7,7 @@ const Movie = require('./models/Movie'); // Your Movie model
 const Series = require('./models/Series'); // Your Series model
 
 // --- Configuration ---
-const MONGO_URI = 'mongodb+srv://vishnusaketh07:NETFLIX@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = 'mongodb+srv://vishnusaketh07:NETFLIXCLONE@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const DB_NAME = 'NETFLIX'; // Your database name
 const OMDB_API_KEY = process.env.OMDB_API_KEY; // Get API key from .env
 

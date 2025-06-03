@@ -9,7 +9,7 @@ const app = express();
 const PORT = process.env.PORT || 5000; // Use port 5000 for the backend, or environment variable
 
 // MongoDB Connection URI
-const MONGO_URI = 'mongodb+srv://vishnusaketh0707:NETFLIX@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = 'mongodb+srv://vishnusaketh0707:NETFLIXCLONE@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const DB_NAME = 'NETFLIX'; // Your database name
 
 // --- Middleware ---
