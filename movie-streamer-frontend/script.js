@@ -262,8 +262,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await fetchData(endpoint);
 
             if (data) {
-                // Populate overlay with data
+                // Determine poster URL with robust fallback handling
                 const overlayPosterUrl = isValidPosterUrl(data.poster) ? data.poster : `https://placehold.co/400x600/000000/FFFFFF?text=No+Image`;
+
+                // Determine play button text and if it's disabled
+                const playButtonText = data.telegramPlayableUrl ? 'Play' : 'No Playable Link';
+                const playButtonClasses = data.telegramPlayableUrl
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-gray-500 cursor-not-allowed';
+                const playButtonDisabled = !data.telegramPlayableUrl;
+
+
                 detailOverlayContainer.innerHTML = `
                     <div class="detail-overlay-content relative bg-[#1a1a1a] rounded-lg shadow-xl max-w-4xl w-full flex flex-col md:flex-row overflow-hidden">
                         <button class="absolute top-3 right-3 text-white text-3xl font-bold z-10 close-overlay-btn">
@@ -280,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p class="mb-4 text-base">${data.plot || 'No plot available.'}</p>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-6">
                                 <p><strong>Director:</strong> ${data.director || 'N/A'}</p>
-                                <p><strong>Writer:</strong> ${data.writer || 'N/A'}</p>
+                                <p><strong>Writer:</b> ${data.writer || 'N/A'}</p>
                                 <p><strong>Actors:</strong> ${data.actors || 'N/A'}</p>
                                 <p><strong>Language:</strong> ${data.language || 'N/A'}</p>
                                 <p><strong>Country:</strong> ${data.country || 'N/A'}</p>
@@ -289,12 +298,24 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>IMDb ID:</strong> ${data.imdbID || 'N/A'}</p>
                                 ${type === 'series' && data.totalSeasons ? `<p><strong>Total Seasons:</strong> ${data.totalSeasons}</p>` : ''}
                             </div>
-                            <div class="flex space-x-4">
-                                <button class="bg-red-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-red-700 transition-colors flex items-center">
-                                    <i class="fas fa-play mr-2"></i> Play
+                            <div class="flex space-x-4 mb-6">
+                                <button class="text-white px-6 py-2 rounded-md font-semibold transition-colors flex items-center play-btn ${playButtonClasses}"
+                                    data-imdb-id="${data.imdbID}" data-type="${data.type}" data-title="${data.title}" data-url="${data.telegramPlayableUrl || ''}" ${playButtonDisabled ? 'disabled' : ''}>
+                                    <i class="fas fa-play mr-2"></i> ${playButtonText}
                                 </button>
                                 <button class="bg-gray-700 text-white px-6 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
                                     <i class="fas fa-plus mr-2"></i> Add to My List
+                                </button>
+                            </div>
+
+                            <div class="mt-4 p-4 bg-gray-800 rounded-md">
+                                <h3 class="text-lg font-semibold mb-2">Set Playable URL (Admin)</h3>
+                                <input type="url" id="playable-url-input" placeholder="Paste Telegram playable URL here"
+                                       class="w-full bg-gray-700 text-white px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
+                                       value="${data.telegramPlayableUrl || ''}">
+                                <button id="save-playable-url-btn"
+                                        class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-700 transition-colors">
+                                    Save Playable URL
                                 </button>
                             </div>
                         </div>
@@ -314,6 +335,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
+                // Play button functionality
+                const playBtn = detailOverlayContainer.querySelector('.play-btn');
+                if (playBtn) {
+                    playBtn.addEventListener('click', (e) => {
+                        const url = e.currentTarget.dataset.url;
+                        if (url) {
+                            window.open(url, '_blank'); // Open URL in new tab
+                            showMessageBox(`Opening playable link for ${e.currentTarget.dataset.title || 'content'}`, 'info');
+                        } else {
+                            showMessageBox('No playable link available for this content.', 'info');
+                        }
+                    });
+                }
+
                 // Add to My List button functionality
                 const addToListBtn = detailOverlayContainer.querySelector('.add-to-list-btn');
                 if (addToListBtn) {
@@ -329,6 +364,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
+                // Save Playable URL button functionality
+                const savePlayableUrlBtn = detailOverlayContainer.querySelector('#save-playable-url-btn');
+                if (savePlayableUrlBtn) {
+                    savePlayableUrlBtn.addEventListener('click', async () => {
+                        const urlInput = document.getElementById('playable-url-input');
+                        const newUrl = urlInput.value.trim();
+                        if (newUrl) {
+                            await setPlayableUrl(imdbId, type, newUrl);
+                        } else {
+                            showMessageBox('Please enter a valid URL.', 'error');
+                        }
+                    });
+                }
+
             } else {
                 console.error('No data received for details overlay.');
                 showMessageBox('Error fetching details: No data received.', 'error');
@@ -341,6 +390,40 @@ document.addEventListener('DOMContentLoaded', () => {
             hideLoading(); // Always hide loading indicator
         }
     };
+
+    /**
+     * Sends a request to the backend to set/update the playable URL for an item.
+     * @param {string} imdbId - The IMDb ID of the movie/series.
+     * @param {string} type - The type of content ('movie' or 'series').
+     * @param {string} url - The new playable URL to save.
+     */
+    const setPlayableUrl = async (imdbId, type, url) => {
+        showLoading();
+        try {
+            const response = await fetch(`${API_BASE_URL}/${type}s/${imdbId}/set-playable-url`, {
+                method: 'PUT', // Use PUT for updating an existing resource
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url }),
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                showMessageBox(result.message || 'Playable URL saved successfully!', 'success');
+                // Re-fetch details to update the overlay with the new URL and enable play button
+                showDetailsOverlay(imdbId, type);
+            } else {
+                showMessageBox(result.message || 'Failed to save playable URL.', 'error');
+            }
+        } catch (error) {
+            console.error('Error saving playable URL:', error);
+            showMessageBox('Error saving playable URL. Please check your backend.', 'error');
+        } finally {
+            hideLoading();
+        }
+    };
+
 
     /**
      * Closes the detail overlay.
@@ -382,14 +465,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         slide.dataset.imdbId = movie.imdbID;
                         slide.dataset.type = movie.type;
 
+                        // Determine play button text and if it's disabled for hero section
+                        const heroPlayButtonText = movie.telegramPlayableUrl ? 'Play' : 'No Link';
+                        const heroPlayButtonClasses = movie.telegramPlayableUrl
+                            ? 'bg-white text-black hover:bg-gray-300'
+                            : 'bg-gray-500 text-gray-300 cursor-not-allowed';
+                        const heroPlayButtonDisabled = !movie.telegramPlayableUrl;
+
+
                         slide.innerHTML = `
                             <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
                             <div class="hero-text-content">
                                 <h1 class="text-4xl md:text-6xl font-bold mb-4">${movie.title || 'No Title'}</h1>
                                 <p class="text-lg md:text-xl mb-6 line-clamp-3">${movie.plot || 'No description available.'}</p>
                                 <div class="flex space-x-4">
-                                    <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}">
-                                        <i class="fas fa-play mr-2"></i> Play
+                                    <button class="px-6 py-3 rounded-full font-semibold transition-colors flex items-center play-btn ${heroPlayButtonClasses}"
+                                        data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}" data-url="${movie.telegramPlayableUrl || ''}" ${heroPlayButtonDisabled ? 'disabled' : ''}>
+                                        <i class="fas fa-play mr-2"></i> ${heroPlayButtonText}
                                     </button>
                                     <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
                                         <i class="fas fa-plus mr-2"></i> My List
@@ -409,7 +501,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Add event listeners for buttons within hero slides
                     heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
-                            showMessageBox(`Playing ${e.currentTarget.dataset.title || 'content'} (feature coming soon!)`, 'info');
+                            const url = e.currentTarget.dataset.url;
+                            if (url) {
+                                window.open(url, '_blank');
+                                showMessageBox(`Opening playable link for ${e.currentTarget.dataset.title || 'content'}`, 'info');
+                            } else {
+                                showMessageBox('No playable link available for this content.', 'info');
+                            }
                         });
                     });
                     heroSlidesContainer.querySelectorAll('.add-to-list-btn').forEach(btn => {

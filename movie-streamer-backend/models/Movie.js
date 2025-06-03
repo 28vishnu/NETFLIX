@@ -25,6 +25,7 @@ const movieSchema = new mongoose.Schema({
     production: String,
     ratings: Array, // Array of objects
     website: String,
+    telegramPlayableUrl: { type: String, default: null } // <--- ADD THIS LINE
 });
 
 module.exports = mongoose.model('Movie', movieSchema);

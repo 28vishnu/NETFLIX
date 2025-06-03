@@ -41,7 +41,11 @@ mongoose.connect(MONGO_URI, { dbName: DB_NAME })
 // Route to get trending movies (e.g., for hero section) - placed before :imdbID
 app.get('/api/movies/trending', async (req, res) => {
     try {
-        const trendingMovies = await Movie.aggregate([{ $sample: { size: 5 } }]);
+        // Use aggregate with $sample to get random movies, including telegramPlayableUrl
+        const trendingMovies = await Movie.aggregate([
+            { $match: { telegramPlayableUrl: { $exists: true, $ne: null, $ne: "" } } }, // Only movies with a playable URL
+            { $sample: { size: 5 } }
+        ]);
         res.json(trendingMovies);
     } catch (error) {
         console.error('Error fetching trending movies:', error);
@@ -75,6 +79,32 @@ app.get('/api/movies/genre/:genreName', async (req, res) => {
     } catch (err) {
         console.error(`Error fetching movies by genre ${req.params.genreName}:`, err);
         res.status(500).json({ message: 'Server error fetching movies by genre', error: err.message });
+    }
+});
+
+// Route to update a movie's playable URL
+app.put('/api/movies/:imdbID/set-playable-url', async (req, res) => {
+    const { imdbID } = req.params;
+    const { url } = req.body; // Expecting { url: "telegram_playable_link_here" }
+
+    if (!url) {
+        return res.status(400).json({ message: 'Playable URL is required.' });
+    }
+
+    try {
+        const movie = await Movie.findOneAndUpdate(
+            { imdbID: imdbID },
+            { telegramPlayableUrl: url },
+            { new: true } // Return the updated document
+        );
+
+        if (!movie) {
+            return res.status(404).json({ message: 'Movie not found.' });
+        }
+        res.json({ message: 'Movie playable URL updated successfully.', movie });
+    } catch (error) {
+        console.error(`Error updating movie ${imdbID} playable URL:`, error);
+        res.status(500).json({ error: 'Failed to update playable URL', details: error.message });
     }
 });
 
@@ -147,6 +177,32 @@ app.get('/api/series/genre/:genreName', async (req, res) => {
     } catch (err) {
         console.error(`Error fetching series by genre ${req.params.genreName}:`, err);
         res.status(500).json({ message: 'Server error fetching series by genre', error: err.message });
+    }
+});
+
+// Route to update a series' playable URL
+app.put('/api/series/:imdbID/set-playable-url', async (req, res) => {
+    const { imdbID } = req.params;
+    const { url } = req.body;
+
+    if (!url) {
+        return res.status(400).json({ message: 'Playable URL is required.' });
+    }
+
+    try {
+        const series = await Series.findOneAndUpdate(
+            { imdbID: imdbID },
+            { telegramPlayableUrl: url },
+            { new: true }
+        );
+
+        if (!series) {
+            return res.status(404).json({ message: 'Series not found.' });
+        }
+        res.json({ message: 'Series playable URL updated successfully.', series });
+    } catch (error) {
+        console.error(`Error updating series ${imdbID} playable URL:`, error);
+        res.status(500).json({ error: 'Failed to update playable URL', details: error.message });
     }
 });
 
@@ -272,18 +328,18 @@ app.get('/api/search', async (req, res) => {
         // Search across multiple fields using $or
         const movies = await Movie.find({
             $or: [
-                { title: searchTerm }, // Changed to 'title' to match schema
-                { plot: searchTerm },   // Changed to 'plot' to match schema
-                { actors: searchTerm }, // Changed to 'actors' to match schema
-                { genre: searchTerm }   // Changed to 'genre' to match schema
+                { title: searchTerm },
+                { plot: searchTerm },
+                { actors: searchTerm },
+                { genre: searchTerm }
             ]
         });
         const series = await Series.find({
             $or: [
-                { title: searchTerm }, // Changed to 'title' to match schema
-                { plot: searchTerm },   // Changed to 'plot' to match schema
-                { actors: searchTerm }, // Changed to 'actors' to match schema
-                { genre: searchTerm }   // Changed to 'genre' to match schema
+                { title: searchTerm },
+                { plot: searchTerm },
+                { actors: searchTerm },
+                { genre: searchTerm }
             ]
         });
         res.json({ movies, series }); // Return an object with movies and series arrays
