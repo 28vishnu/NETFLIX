@@ -273,8 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>Writer:</strong> ${data.writer || 'N/A'}</p>
                                 <p><strong>Actors:</strong> ${data.actors || 'N/A'}</p>
                                 <p><strong>Language:</strong> ${data.language || 'N/A'}</p>
-                                <p><strong>Country:</b> ${data.country || 'N/A'}</p>
-                                <p><strong>Awards:</strong> ${data.awards || 'N/A'}</p>
+                                <p><strong>Country:</strong> ${data.country || 'N/A'}</p>
+                                <p><strong>Awards:</b> ${data.awards || 'N/A'}</p>
                                 <p><strong>IMDb Rating:</strong> ${data.imdbRating || 'N/A'}</p>
                                 <p><strong>IMDb ID:</strong> ${data.imdbID || 'N/A'}</p>
                                 ${type === 'series' && data.totalSeasons ? `<p><strong>Total Seasons:</strong> ${data.totalSeasons}</p>` : ''}
@@ -350,11 +350,13 @@ document.addEventListener('DOMContentLoaded', () => {
      * Fetches hero movies and populates the hero section.
      */
     const fetchHeroMovies = async () => {
+        console.log("Fetching hero movies...");
         try {
             // Fetch trending movies from your backend
             const data = await fetchData(`${API_BASE_URL}/movies/trending`);
 
             if (data && data.length > 0) {
+                console.log(`Found ${data.length} trending movies for hero section.`);
                 // Take top 5 for hero slides
                 const heroMovies = data.slice(0, 5);
                 heroSlidesContainer.innerHTML = '';
@@ -414,14 +416,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 startHeroCarousel();
             } else {
+                console.log("No trending movies found for hero section. Hiding hero.");
                 if (heroSection) { // Check if heroSection exists before manipulating
                     heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies found for hero section.</p>';
+                    heroSection.classList.add('hidden-hero'); // Ensure it's hidden if no content
                 }
             }
         } catch (error) {
             console.error('Error fetching hero movies:', error);
             if (heroSection) { // Check if heroSection exists before manipulating
                 heroSection.innerHTML = '<p class="text-center text-red-500">Error loading hero content. Please try again later.</p>';
+                heroSection.classList.add('hidden-hero'); // Hide if error
             }
         }
     };
@@ -589,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Desktop Search toggle and input functionality
     if (desktopSearchToggleBtn && desktopSearchInputWrapper && desktopSearchInput) {
         desktopSearchToggleBtn.addEventListener('click', () => {
+            console.log("Desktop search toggle clicked.");
             desktopSearchInputWrapper.classList.toggle('hidden');
             if (!desktopSearchInputWrapper.classList.contains('hidden')) {
                 desktopSearchInput.focus(); // Focus on input when shown
@@ -600,6 +606,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         desktopSearchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
+                console.log("Desktop search input: Enter pressed. Query:", desktopSearchInput.value.trim());
                 await handleSearch(desktopSearchInput.value.trim());
                 // Optionally hide search input after search on desktop
                 if (window.innerWidth >= 768) {
@@ -613,6 +620,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mobileSearchToggleBtn && mobileSearchInputWrapper && mobileSearchInput) {
         mobileSearchToggleBtn.addEventListener('click', (e) => {
             e.preventDefault(); // Prevent default link behavior for the search icon
+            console.log("Mobile search toggle clicked.");
             mobileSearchInputWrapper.classList.toggle('hidden');
             if (!mobileSearchInputWrapper.classList.contains('hidden')) {
                 mobileSearchInput.focus(); // Focus on input when shown
@@ -629,6 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mobileSearchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
+                console.log("Mobile search input: Enter pressed. Query:", mobileSearchInput.value.trim());
                 await handleSearch(mobileSearchInput.value.trim());
                 // Hide search input after search on mobile
                 if (window.innerWidth < 768) {
@@ -644,14 +653,17 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} query - The search query.
      */
     const handleSearch = async (query) => {
+        console.log("handleSearch called with query:", query);
         if (query.length > 2) { // Require at least 3 characters for search
             movieSectionsContainer.innerHTML = ''; // Clear existing content
             heroSection.classList.add('hidden-hero'); // Hide hero during search
             clearInterval(heroInterval); // Stop hero carousel
 
             try {
+                console.log("Fetching search results from:", `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
                 const searchResults = await fetchData(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
                 const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
+                console.log("Search results received:", allResults);
 
                 if (allResults.length > 0) {
                     // Create a new section for search results

@@ -1,15 +1,15 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const Movie = require('./models/Movie'); // Ensure this path is correct for your Movie model
-const Series = require('./models/Series'); // Ensure this path is correct for your Series model
-const UserList = require('./models/UserList'); // NEW: UserList model
+const Movie = require('./models/Movie'); // Your Movie model
+const Series = require('./models/Series'); // Your Series model
+const UserList = require('./models/UserList'); // Your UserList model
 
 const app = express();
 const PORT = process.env.PORT || 5000; // Use port 5000 for the backend, or environment variable
 
 // MongoDB Connection URI
-const MONGO_URI = 'mongodb+srv://vishnusaketh07:NETFLIX@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const MONGO_URI = 'mongodb+srv://vishnusaketh0707:NETFLIX@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const DB_NAME = 'NETFLIX'; // Your database name
 
 // --- Middleware ---
@@ -42,7 +42,6 @@ mongoose.connect(MONGO_URI, { dbName: DB_NAME })
 app.get('/api/movies/trending', async (req, res) => {
     try {
         const trendingMovies = await Movie.aggregate([{ $sample: { size: 5 } }]);
-        // Always return an array, even if empty, for trending/popular
         res.json(trendingMovies);
     } catch (error) {
         console.error('Error fetching trending movies:', error);
@@ -54,7 +53,6 @@ app.get('/api/movies/trending', async (req, res) => {
 app.get('/api/movies/popular', async (req, res) => {
     try {
         const popularMovies = await Movie.aggregate([{ $sample: { size: 10 } }]);
-        // Always return an array, even if empty, for trending/popular
         res.json(popularMovies);
     } catch (error) {
         console.error('Error fetching popular movies:', error);
@@ -66,13 +64,11 @@ app.get('/api/movies/popular', async (req, res) => {
 app.get('/api/movies/genre/:genreName', async (req, res) => {
     try {
         const genre = req.params.genreName;
-        // Query for movies where the 'genre' field (which is an array) contains the specified genre string, case-insensitive
         const movies = await Movie.find({
             genre: { $in: [new RegExp(genre, 'i')] }
         });
 
         if (movies.length === 0) {
-            // It's acceptable to return 404 for specific genre if no content
             return res.status(404).json({ message: `No movies found for genre: ${genre}` });
         }
         res.json(movies);
@@ -116,7 +112,6 @@ app.get('/api/movies', async (req, res) => {
 app.get('/api/series/popular', async (req, res) => {
     try {
         const popularSeries = await Series.aggregate([{ $sample: { size: 10 } }]);
-        // Always return an array, even if empty, for trending/popular
         res.json(popularSeries);
     } catch (error) {
         console.error('Error fetching popular series:', error);
@@ -129,7 +124,11 @@ app.get('/api/series/best', async (req, res) => {
     try {
         const bestSeriesTitles = [
             'Breaking Bad', 'Stranger Things', 'House of the Dragon',
-            'Game of Thrones', 'Prison Break'
+            'Game of Thrones', 'Prison Break', 'Chernobyl', 'The Wire',
+            'Band of Brothers', 'The Queen\'s Gambit', 'The Mandalorian',
+            'Dark', 'Squid Game', 'Arcane', 'Severance', 'The Boys',
+            'Ted Lasso', 'Succession', 'Fleabag', 'Mr. Robot', 'Peaky Blinders',
+            'Mindhunter', 'The Crown', 'Fallout', 'Shōgun', 'The Bear'
         ];
         // Use $in operator to find series by title, case-insensitive
         const bestSeries = await Series.find({
@@ -188,7 +187,7 @@ app.get('/api/series', async (req, res) => {
 
 
 // ======================================================================================
-// MY LIST ROUTES (NEW)
+// MY LIST ROUTES
 // ======================================================================================
 
 // Get user's list
