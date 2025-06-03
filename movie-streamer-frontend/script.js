@@ -167,8 +167,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {HTMLElement} The created movie card div.
      */
     const createMovieCard = (item) => {
+        // Renamed from 'movie-card' to 'movie-card-container' for consistency with new CSS
         const card = document.createElement('div');
-        card.className = 'movie-card relative flex-shrink-0 w-32 md:w-40 lg:w-48 rounded-md overflow-hidden cursor-pointer transform transition-transform duration-300 hover:scale-105 hover:z-10 group';
+        card.className = 'movie-card-container relative flex-shrink-0 w-32 md:w-40 lg:w-48 rounded-md overflow-hidden cursor-pointer';
         card.dataset.imdbId = item.imdbID; // Store IMDb ID for detail fetching
         card.dataset.type = item.type; // Store type (movie/series)
 
@@ -178,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `
             <img src="${posterUrl}" alt="${item.title || 'No Title'} Poster" class="w-full h-48 md:h-60 lg:h-72 object-cover rounded-md"
                  onerror="this.onerror=null;this.src='https://placehold.co/300x450/000000/FFFFFF?text=Image+Missing'; console.error('Image failed to load for: ${item.title || 'No Title'} (${item.imdbID || 'N/A'}) - Original URL: ${item.poster || 'N/A'}');">
-            <div class="movie-card-info absolute bottom-0 left-0 right-0 p-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black via-black/70 to-transparent">
+            <div class="movie-card-info">
                 <h3 class="text-sm md:text-base font-semibold truncate">${item.title || 'No Title'}</h3>
                 <p class="text-xs text-gray-400">${item.year || 'N/A'}</p>
             </div>
@@ -201,13 +202,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const fetchAndDisplaySection = async (title, endpoint, isGridCategory = false) => {
         const sectionDiv = document.createElement('div');
         sectionDiv.className = 'movie-section mb-8';
-        sectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">${title}</h2><div class="movie-row flex space-x-3 overflow-x-auto scrollbar-hide pb-4"></div>`;
-        const movieRow = sectionDiv.querySelector('.movie-row');
+        // Add scroll-snap-x to movie-row for horizontal snapping if not a grid category
+        const movieRowClasses = isGridCategory ?
+            'movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4' :
+            'movie-row flex space-x-3 overflow-x-auto scrollbar-hide pb-4 scroll-snap-x';
 
-        if (isGridCategory) {
-            movieRow.classList.remove('flex', 'space-x-3', 'overflow-x-auto', 'scrollbar-hide', 'pb-4');
-            movieRow.classList.add('movie-grid-category', 'grid', 'grid-cols-2', 'sm:grid-cols-3', 'md:grid-cols-4', 'lg:grid-cols-5', 'xl:grid-cols-6', 'gap-2', 'md:gap-4');
-        }
+        sectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">${title}</h2><div class="${movieRowClasses}"></div>`;
+        const movieRow = sectionDiv.querySelector(`.${isGridCategory ? 'movie-grid-category' : 'movie-row'}`);
+
 
         try {
             const data = await fetchData(endpoint); // fetchData no longer manages loading indicator
@@ -228,7 +230,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 filteredItems.forEach(item => {
                     // Ensure item has imdbID and type before creating card
                     if (item.imdbID && item.type) {
-                        movieRow.appendChild(createMovieCard(item));
+                        const card = createMovieCard(item);
+                        if (!isGridCategory) { // Add scroll-snap-start only for carousel items
+                            card.classList.add('scroll-snap-start');
+                        }
+                        movieRow.appendChild(card);
                     }
                 });
             } else {
@@ -263,17 +269,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="md:w-1/3 flex-shrink-0">
                             <img src="${overlayPosterUrl}" alt="${data.title || 'No Title'} Poster" class="w-full h-auto object-cover md:h-full rounded-t-lg md:rounded-l-lg md:rounded-t-none" onerror="this.onerror=null;this.src='https://placehold.co/400x600/000000/FFFFFF?text=No+Image';">
                         </div>
-                        <div class="md:w-2/3 p-6 text-white overflow-y-auto max-h-[80vh]">
-                            <h2 class="text-3xl md:text-4xl font-bold mb-2">${data.title || 'N/A'}</h2>
+                        <div class="md:w-2/3 p-6 text-white custom-scrollbar overflow-y-auto max-h-[80vh]"> <h2 class="text-3xl md:text-4xl font-bold mb-2">${data.title || 'N/A'}</h2>
                             <p class="text-gray-400 text-sm mb-4">
                                 ${data.year || 'N/A'} | ${data.rated || 'N/A'} | ${data.runtime || 'N/A'} | ${Array.isArray(data.genre) ? data.genre.join(', ') : data.genre || 'N/A'}
                             </p>
                             <p class="mb-4 text-base">${data.plot || 'No plot available.'}</p>
-                            <div class="flex flex-col space-y-4 mb-6"> <button class="bg-white text-black px-6 py-3 rounded-md font-semibold hover:bg-gray-300 transition-colors flex items-center justify-center w-full play-btn">
+                            <div class="flex flex-col space-y-4 mb-6">
+                                <button class="play-btn bg-white text-black px-6 py-3 rounded-md font-semibold hover:bg-gray-300 transition-colors flex items-center justify-center w-full">
                                     <i class="fas fa-play mr-2"></i> Play
                                 </button>
-                                <button class="bg-gray-700 text-white px-6 py-3 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center justify-center w-full add-to-list-btn" data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
-                                    <i class="fas fa-plus mr-2"></i> Add to My List
+                                <button class="add-to-list-btn bg-gray-700 text-white px-6 py-3 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center justify-center w-full" data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
+                                    <i class="fas fa-plus mr-2"></i> My List
                                 </button>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-6">
@@ -367,10 +373,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         const slide = document.createElement('div');
                         slide.className = 'hero-slide';
                         const slidePosterUrl = isValidPosterUrl(movie.poster) ? movie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image';
-                        slide.style.backgroundImage = `url('${slidePosterUrl}')`;
-                        slide.dataset.imdbId = movie.imdbID;
-                        slide.dataset.type = movie.type;
-
+                        // Set background image on the hero-section::before pseudo-element for the darkening filter
+                        // This requires the hero-section to have the background-image set via JS as well
+                        if (index === 0 && heroSection) { // Set the background for the first slide on the hero-section
+                            heroSection.style.setProperty('--hero-bg-image', `url('${slidePosterUrl}')`);
+                        }
                         slide.innerHTML = `
                             <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
                             <div class="hero-text-content">
@@ -460,6 +467,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 dot.classList.add('bg-gray-500');
             }
         });
+
+        // Update the background image of the hero-section::before for the current slide
+        if (heroSection && heroSlidesContainer.children[currentHeroSlide]) {
+            const currentSlideImg = heroSlidesContainer.children[currentHeroSlide].querySelector('img');
+            if (currentSlideImg) {
+                heroSection.style.setProperty('--hero-bg-image', `url('${currentSlideImg.src}')`);
+            }
+        }
     };
 
     /**

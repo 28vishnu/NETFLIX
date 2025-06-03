@@ -25,6 +25,32 @@ body {
     scrollbar-width: none;  /* Hides scrollbar for Firefox */
 }
 
+/* Styles for horizontal scrolling carousels, ensuring smooth snapping */
+.scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch; /* Improves scroll performance on iOS */
+}
+.scroll-snap-start {
+    scroll-snap-align: start; /* Aligns items to the start of the scroll area */
+}
+
+/* Custom scrollbar for detail overlay and other scrollable areas */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #2d3748; /* Darker track */
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #4a5568; /* Slightly lighter thumb */
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #636b77; /* Even lighter on hover */
+}
+
+
 /* --- Header Styling --- */
 #main-header {
     background-color: rgba(20, 20, 20, 0.9); /* Slightly more opaque background */
@@ -68,11 +94,29 @@ body {
     pointer-events: none; /* Disable interactions when hidden */
 }
 
+/* Hero section background image with darkening filter */
+#hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.6); /* Darken the background image */
+    z-index: 0;
+    transition: background-image 0.7s ease-in-out;
+}
+
 .hero-slides-container {
     display: flex;
     width: 100%;
     height: 100%;
     transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1); /* Smooth cubic-bezier transition */
+    position: absolute; /* Position slides relative to hero-section */
+    top: 0;
+    left: 0;
 }
 
 .hero-slide {
@@ -153,11 +197,15 @@ body {
 }
 
 /* Movie card specific styling for hover effects */
-.movie-card {
+.movie-card-container { /* Renamed from .movie-card for consistency */
+    position: relative;
     transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for scale and shadow */
     box-shadow: 0 0 0 rgba(0,0,0,0); /* Initial no shadow */
+    cursor: pointer;
+    border-radius: 0.5rem; /* Apply rounded corners */
+    overflow: hidden; /* Ensures content respects border-radius */
 }
-.movie-card:hover {
+.movie-card-container:hover {
     transform: scale(1.08); /* Slightly more pronounced scale */
     box-shadow: 0 8px 16px rgba(0,0,0,0.5); /* Add a subtle shadow on hover */
     z-index: 20; /* Ensure hovered card is on top */
@@ -165,14 +213,32 @@ body {
 
 /* Info overlay on movie card hover */
 .movie-card-info {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+    padding: 0.75rem; /* Slightly more padding */
     opacity: 0;
     transition: opacity 0.3s ease;
-    padding: 0.75rem; /* Slightly more padding */
+    pointer-events: none; /* Allows clicks to pass through to the card */
 }
-.movie-card:hover .movie-card-info {
+.movie-card-container:hover .movie-card-info {
     opacity: 1;
 }
+.movie-card-info h3 {
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 600; /* font-semibold */
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.movie-card-info p {
+    font-size: 0.75rem; /* text-xs */
+    color: #a0aec0; /* gray-400 */
+}
+
 
 /* Detail Overlay */
 .detail-overlay {
@@ -207,22 +273,6 @@ body {
 }
 .detail-overlay.active .detail-overlay-content {
     transform: translateY(0);
-}
-
-/* Custom scrollbar for detail overlay */
-.detail-overlay-content::-webkit-scrollbar {
-    width: 8px;
-}
-.detail-overlay-content::-webkit-scrollbar-track {
-    background: #2a2a2a;
-    border-radius: 10px;
-}
-.detail-overlay-content::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
-}
-.detail-overlay-content::-webkit-scrollbar-thumb:hover {
-    background: #555;
 }
 
 /* Close button for detail overlay - Positioning adjusted for mobile */
@@ -298,6 +348,8 @@ body {
     justify-content: space-around;
     align-items: center;
     box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
+    border-top-left-radius: 0.75rem; /* rounded-xl */
+    border-top-right-radius: 0.75rem; /* rounded-xl */
 }
 
 #mobile-bottom-nav ul {
@@ -318,8 +370,11 @@ body {
     text-decoration: none;
     font-size: 0.7rem; /* Smaller text for mobile */
     font-weight: 500;
-    padding: 5px;
+    padding: 0.5rem 0.25rem; /* Adjusted padding */
     transition: color 0.2s ease;
+    flex: 1; /* Distribute space evenly */
+    text-align: center;
+    border-radius: 0.5rem; /* rounded-md */
 }
 
 #mobile-bottom-nav .nav-link i {
@@ -330,6 +385,7 @@ body {
 #mobile-bottom-nav .nav-link:hover,
 #mobile-bottom-nav .nav-link.active {
     color: #ffffff; /* Brighter on hover/active */
+    background-color: rgba(255, 255, 255, 0.1); /* Subtle active background */
 }
 
 /* Mobile Search Overlay (Full Screen) */
@@ -571,6 +627,42 @@ body {
 #audio-track-options div.bg-red-600,
 #subtitle-options div.bg-red-600 {
     background-color: #e50914; /* Netflix red for active item */
+}
+
+
+/* --- Consolidated Category Grid (for Movies, TV Shows pages) --- */
+.movie-grid-category {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Smaller cards for mobile grid */
+    gap: 0.5rem; /* Reduced gap for mobile grid */
+}
+
+@media (min-width: 480px) {
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 0.75rem; /* Reduced gap */
+    }
+}
+
+@media (min-width: 640px) { /* sm breakpoint */
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem; /* Reduced gap */
+    }
+}
+
+@media (min-width: 768px) { /* md breakpoint */
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 1.25rem; /* Increased gap for desktop */
+    }
+}
+
+@media (min-width: 1024px) { /* lg breakpoint */
+    .movie-grid-category {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1.5rem; /* Further increased gap */
+    }
 }
 
 
