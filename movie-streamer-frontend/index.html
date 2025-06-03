@@ -265,9 +265,11 @@
             #main-header nav { /* Desktop nav */
                 display: none; /* Keep desktop nav hidden on mobile */
             }
+            /* Search toggle button is always visible */
             #main-header #search-toggle-btn {
-                display: block; /* Show search toggle on mobile */
+                display: block;
             }
+            /* Search input wrapper behavior on mobile */
             #main-header #search-input-wrapper {
                 position: absolute; /* Position relative to header */
                 top: 100%; /* Below the header content */
@@ -278,6 +280,13 @@
                 box-shadow: 0 2px 5px rgba(0,0,0,0.5); /* Shadow below */
                 z-index: 40; /* Below main header, above main content */
                 display: none; /* Hidden by default, toggled by JS */
+                /* When 'hidden' class is removed, it should become flex on mobile */
+                /* This is controlled by JS toggling 'hidden' class */
+            }
+            /* Explicitly set display to flex for search input wrapper when visible on mobile */
+            #main-header #search-input-wrapper:not(.hidden) {
+                display: flex;
+                align-items: center;
             }
             #main-header #search-input {
                 width: 100%;
@@ -372,7 +381,7 @@
         <div class="flex items-center space-x-4">
             <div class="relative flex items-center w-full md:w-auto"> <button id="search-toggle-btn" class="text-white text-xl hover:text-gray-300 transition-colors mr-2"> <i class="fas fa-search"></i>
                 </button>
-                <div id="search-input-wrapper" class="relative hidden md:block flex-grow"> <input type="text" id="search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-full"> </div>
+                <div id="search-input-wrapper" class="relative hidden flex-grow"> <input type="text" id="search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-full"> </div>
             </div>
             <div id="user-details" class="flex items-center space-x-2">
                 <span class="text-sm md:text-base">Guest</span>

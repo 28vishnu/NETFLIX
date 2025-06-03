@@ -23,9 +23,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const navLinks = document.querySelectorAll('.nav-link');
 
     // Search Elements (now unified for desktop and mobile)
-    const searchToggleBtn = document.getElementById('search-toggle-btn'); // Renamed from desktopSearchToggleBtn
-    const searchInputWrapper = document.getElementById('search-input-wrapper'); // Renamed from desktopSearchInputWrapper
-    const searchInput = document.getElementById('search-input'); // Renamed from desktopSearchInput
+    const searchToggleBtn = document.getElementById('search-toggle-btn');
+    const searchInputWrapper = document.getElementById('search-input-wrapper');
+    const searchInput = document.getElementById('search-input');
 
     // Hero Section Elements
     const heroSection = document.getElementById('hero-section');
@@ -616,9 +616,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Search input wrapper is now visible. Attempting to focus.");
                 searchInput.focus(); // Focus on input when shown
             } else {
-                console.log("Search input wrapper is now hidden. Clearing input and reloading home.");
+                console.log("Search input wrapper is now hidden. Clearing input.");
                 searchInput.value = ''; // Clear input when hiding
-                loadContent('home'); // Reload home content if search is cleared/hidden
+                // REMOVED: loadContent('home'); // This was causing the reload
             }
         });
 
