@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Custom Player Controls Elements
     const playPauseBtn = document.getElementById('play-pause-btn');
+    const rewindBtn = document.getElementById('rewind-btn'); // New
+    const forwardBtn = document.getElementById('forward-btn'); // New
     const progressBarContainer = document.querySelector('.progress-bar-container');
     const progressBarFill = document.querySelector('.progress-bar-fill');
     const progressBarHandle = document.querySelector('.progress-bar-handle');
@@ -56,6 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeSlider = document.getElementById('volume-slider');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     const playerControls = document.querySelector('.player-controls');
+
+    // New Audio/Subtitle Elements
+    const audioTrackBtn = document.getElementById('audio-track-btn');
+    const audioTrackOptions = document.getElementById('audio-track-options');
+    const subtitleBtn = document.getElementById('subtitle-btn');
+    const subtitleOptions = document.getElementById('subtitle-options');
 
 
     // --- Global Variables ---
@@ -189,20 +197,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Checks if a URL is likely a direct video file URL based on common extensions.
+     * Checks if a URL is likely a direct video file URL based on common extensions and domains.
      * This is a heuristic and might not cover all cases or streaming protocols.
      * @param {string} url - The URL to check.
      * @returns {boolean} True if it looks like a direct video file, false otherwise.
      */
     const isDirectVideoUrl = (url) => {
         if (!url || typeof url !== 'string') return false;
-        // More comprehensive list of direct video file indicators
-        const directIndicators = [
-            '.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', // common extensions
-            'cdn.telegram-cloud.org', // common Telegram direct file host
-            'video.googleusercontent.com' // sometimes used for direct video links
-        ];
-        return directIndicators.some(indicator => url.toLowerCase().includes(indicator));
+        const lowerUrl = url.toLowerCase();
+        // Common video extensions
+        const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.flv', '.wmv'];
+        // Common direct file hosting domains (can be expanded)
+        const directFileHosts = ['cdn.telegram-cloud.org', 'video.googleusercontent.com', 'drive.google.com/uc?export=download'];
+
+        // Check if URL ends with a video extension
+        if (videoExtensions.some(ext => lowerUrl.endsWith(ext))) {
+            return true;
+        }
+        // Check if URL contains a known direct file host
+        if (directFileHosts.some(host => lowerUrl.includes(host))) {
+            return true;
+        }
+        // If it's a t.me link, it's likely a web player, not a direct file
+        if (lowerUrl.includes('t.me/')) {
+            return false;
+        }
+        return false; // Default to false if not clearly a direct video
     };
 
 
@@ -300,6 +320,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         moviePlayer.src = videoUrl;
+        // Reset player state
+        moviePlayer.currentTime = 0;
+        moviePlayer.volume = 1; // Reset volume
+        volumeSlider.value = 1;
+        moviePlayer.muted = false;
+        volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>'; // Set to play icon initially
+
         moviePlayer.load(); // Load the video
         moviePlayer.play().catch(error => {
             console.error('Error playing video automatically:', error);
@@ -567,7 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}" data-url="${movie.telegramPlayableUrl || ''}" ${heroPlayButtonDisabled ? 'disabled' : ''}>
                                         <i class="fas fa-play mr-2"></i> ${heroPlayButtonText}
                                     </button>
-                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
+                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbId}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
                                         <i class="fas fa-plus mr-2"></i> My List
                                     </button>
                                 </div>
@@ -760,6 +788,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Rewind/Forward Buttons
+    rewindBtn.addEventListener('click', () => {
+        moviePlayer.currentTime = Math.max(0, moviePlayer.currentTime - 10); // Skip back 10 seconds
+    });
+
+    forwardBtn.addEventListener('click', () => {
+        moviePlayer.currentTime = Math.min(moviePlayer.duration, moviePlayer.currentTime + 10); // Skip forward 10 seconds
+    });
+
+
     // Update Play/Pause Button Icon
     moviePlayer.addEventListener('play', () => {
         playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
@@ -780,7 +818,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update Progress Bar and Time Display
     moviePlayer.addEventListener('timeupdate', () => {
-        if (!isDraggingProgressBar) { // Only update if not dragging
+        if (!isDraggingProgressBar && moviePlayer.duration) { // Only update if not dragging and duration is available
             const progress = (moviePlayer.currentTime / moviePlayer.duration) * 100;
             progressBarFill.style.width = `${progress}%`;
             progressBarHandle.style.left = `${progress}%`;
@@ -792,6 +830,8 @@ document.addEventListener('DOMContentLoaded', () => {
     moviePlayer.addEventListener('loadedmetadata', () => {
         durationSpan.textContent = formatTime(moviePlayer.duration);
         volumeSlider.value = moviePlayer.volume; // Initialize volume slider
+        populateAudioTracks(); // Populate audio tracks when metadata loads
+        populateTextTracks(); // Populate text tracks when metadata loads
     });
 
     // Progress Bar Seeking
@@ -879,7 +919,86 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     });
 
-    // --- End Custom Video Player Controls Logic ---
+    // --- Audio Track Selection ---
+    const populateAudioTracks = () => {
+        audioTrackOptions.innerHTML = ''; // Clear previous options
+        if (moviePlayer.audioTracks && moviePlayer.audioTracks.length > 0) {
+            moviePlayer.audioTracks.forEach((track, index) => {
+                const option = document.createElement('div');
+                option.className = 'px-3 py-1 cursor-pointer hover:bg-gray-700 rounded-md';
+                option.textContent = track.label || `Track ${index + 1}`;
+                option.dataset.index = index;
+                if (track.enabled) {
+                    option.classList.add('bg-red-600', 'hover:bg-red-700'); // Highlight active track
+                }
+                option.addEventListener('click', () => {
+                    // Disable all tracks, then enable the selected one
+                    for (let i = 0; i < moviePlayer.audioTracks.length; i++) {
+                        moviePlayer.audioTracks[i].enabled = false;
+                    }
+                    track.enabled = true;
+                    populateAudioTracks(); // Re-populate to update active state
+                    showMessageBox(`Audio changed to: ${track.label || `Track ${index + 1}`}`, 'info');
+                });
+                audioTrackOptions.appendChild(option);
+            });
+        } else {
+            audioTrackOptions.innerHTML = '<div class="px-3 py-1 text-gray-400">No audio tracks found</div>';
+        }
+    };
+
+    // --- Subtitle (Text Track) Selection ---
+    const populateTextTracks = () => {
+        subtitleOptions.innerHTML = ''; // Clear previous options
+
+        // Add "Off" option for subtitles
+        const offOption = document.createElement('div');
+        offOption.className = 'px-3 py-1 cursor-pointer hover:bg-gray-700 rounded-md';
+        offOption.textContent = 'Off';
+        offOption.addEventListener('click', () => {
+            for (let i = 0; i < moviePlayer.textTracks.length; i++) {
+                moviePlayer.textTracks[i].mode = 'hidden';
+            }
+            populateTextTracks(); // Re-populate to update active state
+            showMessageBox('Subtitles turned off.', 'info');
+        });
+        // Check if all tracks are hidden to mark "Off" as active
+        const allTracksHidden = Array.from(moviePlayer.textTracks).every(track => track.mode === 'hidden');
+        if (allTracksHidden || moviePlayer.textTracks.length === 0) {
+             offOption.classList.add('bg-red-600', 'hover:bg-red-700');
+        }
+        subtitleOptions.appendChild(offOption);
+
+
+        if (moviePlayer.textTracks && moviePlayer.textTracks.length > 0) {
+            moviePlayer.textTracks.forEach((track, index) => {
+                // Only show subtitle/caption tracks, not descriptions etc.
+                if (track.kind === 'subtitles' || track.kind === 'captions') {
+                    const option = document.createElement('div');
+                    option.className = 'px-3 py-1 cursor-pointer hover:bg-gray-700 rounded-md';
+                    option.textContent = track.label || track.language || `Subtitle ${index + 1}`;
+                    option.dataset.index = index;
+                    if (track.mode === 'showing') {
+                        option.classList.add('bg-red-600', 'hover:bg-red-700'); // Highlight active track
+                    }
+                    option.addEventListener('click', () => {
+                        // Hide all tracks, then enable the selected one
+                        for (let i = 0; i < moviePlayer.textTracks.length; i++) {
+                            moviePlayer.textTracks[i].mode = 'hidden';
+                        }
+                        track.mode = 'showing'; // Show the selected subtitle
+                        populateTextTracks(); // Re-populate to update active state
+                        showMessageBox(`Subtitles changed to: ${track.label || track.language || `Subtitle ${index + 1}`}`, 'info');
+                    });
+                    subtitleOptions.appendChild(option);
+                }
+            });
+        }
+        // If only "Off" option is present (no actual tracks), show a message
+        if (subtitleOptions.children.length === 1 && subtitleOptions.children[0].textContent === 'Off') {
+            subtitleOptions.innerHTML = '<div class="px-3 py-1 text-gray-400">No subtitles found</div>';
+        }
+    };
 
 
     // --- Event Listeners ---
@@ -984,6 +1103,17 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileSearchInput.value = ''; // Clear input
             document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
             mobileSearchResultsContainer.innerHTML = ''; // Clear search results
+        });
+    }
+
+    // Event listener for closing the video player overlay
+    if (closeVideoBtn) {
+        closeVideoBtn.addEventListener('click', closeVideoPlayer);
+        // Also close if clicking outside the video container
+        videoPlayerOverlay.addEventListener('click', (e) => {
+            if (e.target === videoPlayerOverlay) {
+                closeVideoPlayer();
+            }
         });
     }
 
