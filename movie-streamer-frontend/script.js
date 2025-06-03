@@ -45,6 +45,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const moviePlayer = document.getElementById('movie-player');
     const closeVideoBtn = document.querySelector('#video-player-overlay .close-video-btn');
 
+    // Custom Player Controls Elements
+    const playPauseBtn = document.getElementById('play-pause-btn');
+    const progressBarContainer = document.querySelector('.progress-bar-container');
+    const progressBarFill = document.querySelector('.progress-bar-fill');
+    const progressBarHandle = document.querySelector('.progress-bar-handle');
+    const currentTimeSpan = document.getElementById('current-time');
+    const durationSpan = document.getElementById('duration');
+    const volumeBtn = document.getElementById('volume-btn');
+    const volumeSlider = document.getElementById('volume-slider');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const playerControls = document.querySelector('.player-controls');
+
 
     // --- Global Variables ---
     let currentHeroSlide = 0;
@@ -177,14 +189,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Checks if a URL is likely a direct video file URL.
+     * Checks if a URL is likely a direct video file URL based on common extensions.
+     * This is a heuristic and might not cover all cases or streaming protocols.
      * @param {string} url - The URL to check.
      * @returns {boolean} True if it looks like a direct video file, false otherwise.
      */
     const isDirectVideoUrl = (url) => {
         if (!url || typeof url !== 'string') return false;
-        const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv']; // Common video extensions
-        return videoExtensions.some(ext => url.toLowerCase().includes(ext));
+        // More comprehensive list of direct video file indicators
+        const directIndicators = [
+            '.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', // common extensions
+            'cdn.telegram-cloud.org', // common Telegram direct file host
+            'video.googleusercontent.com' // sometimes used for direct video links
+        ];
+        return directIndicators.some(indicator => url.toLowerCase().includes(indicator));
     };
 
 
@@ -275,7 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const openVideoPlayer = (videoUrl, title) => {
         // Check if the URL is a direct video file. If not, open in new tab.
-        // This is a basic check; more robust validation might be needed for production.
         if (!isDirectVideoUrl(videoUrl)) {
             showMessageBox(`This link cannot be played directly within the app. Opening in a new tab.`, 'info');
             window.open(videoUrl, '_blank');
@@ -730,6 +747,141 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
+    // --- Custom Video Player Controls Logic ---
+
+    let isDraggingProgressBar = false;
+
+    // Play/Pause Toggle
+    playPauseBtn.addEventListener('click', () => {
+        if (moviePlayer.paused || moviePlayer.ended) {
+            moviePlayer.play();
+        } else {
+            moviePlayer.pause();
+        }
+    });
+
+    // Update Play/Pause Button Icon
+    moviePlayer.addEventListener('play', () => {
+        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+    });
+    moviePlayer.addEventListener('pause', () => {
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    });
+    moviePlayer.addEventListener('ended', () => {
+        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+    });
+
+    // Format time for display
+    const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
+    // Update Progress Bar and Time Display
+    moviePlayer.addEventListener('timeupdate', () => {
+        if (!isDraggingProgressBar) { // Only update if not dragging
+            const progress = (moviePlayer.currentTime / moviePlayer.duration) * 100;
+            progressBarFill.style.width = `${progress}%`;
+            progressBarHandle.style.left = `${progress}%`;
+            currentTimeSpan.textContent = formatTime(moviePlayer.currentTime);
+        }
+    });
+
+    // Set Duration when metadata loads
+    moviePlayer.addEventListener('loadedmetadata', () => {
+        durationSpan.textContent = formatTime(moviePlayer.duration);
+        volumeSlider.value = moviePlayer.volume; // Initialize volume slider
+    });
+
+    // Progress Bar Seeking
+    progressBarContainer.addEventListener('mousedown', (e) => {
+        isDraggingProgressBar = true;
+        updateProgressBar(e);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isDraggingProgressBar) {
+            updateProgressBar(e);
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDraggingProgressBar) {
+            isDraggingProgressBar = false;
+        }
+    });
+
+    const updateProgressBar = (e) => {
+        const rect = progressBarContainer.getBoundingClientRect();
+        let x = e.clientX - rect.left; // x position within the element.
+        let width = rect.width;
+        let percent = Math.max(0, Math.min(1, x / width)); // Clamp between 0 and 1
+
+        moviePlayer.currentTime = percent * moviePlayer.duration;
+        progressBarFill.style.width = `${percent * 100}%`;
+        progressBarHandle.style.left = `${percent * 100}%`;
+        currentTimeSpan.textContent = formatTime(moviePlayer.currentTime);
+    };
+
+    // Volume Control
+    volumeBtn.addEventListener('click', () => {
+        moviePlayer.muted = !moviePlayer.muted;
+        volumeBtn.innerHTML = moviePlayer.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        volumeSlider.value = moviePlayer.muted ? 0 : moviePlayer.volume;
+    });
+
+    volumeSlider.addEventListener('input', () => {
+        moviePlayer.volume = volumeSlider.value;
+        moviePlayer.muted = moviePlayer.volume === 0;
+        volumeBtn.innerHTML = moviePlayer.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+    });
+
+    // Fullscreen Toggle
+    fullscreenBtn.addEventListener('click', () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            moviePlayer.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                showMessageBox('Fullscreen not supported or allowed by browser.', 'error');
+            });
+        }
+    });
+
+    // Update fullscreen icon
+    document.addEventListener('fullscreenchange', () => {
+        if (document.fullscreenElement) {
+            fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+        } else {
+            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+        }
+    });
+
+    // Show/Hide controls on mouse move (for desktop)
+    let controlsTimeout;
+    videoPlayerOverlay.addEventListener('mousemove', () => {
+        playerControls.classList.add('active');
+        clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+            if (!moviePlayer.paused && !isDraggingProgressBar) {
+                playerControls.classList.remove('active');
+            }
+        }, 3000); // Hide controls after 3 seconds of inactivity
+    });
+
+    // Keep controls visible if paused or dragging
+    moviePlayer.addEventListener('pause', () => playerControls.classList.add('active'));
+    moviePlayer.addEventListener('play', () => {
+        clearTimeout(controlsTimeout);
+        controlsTimeout = setTimeout(() => {
+            playerControls.classList.remove('active');
+        }, 3000);
+    });
+
+    // --- End Custom Video Player Controls Logic ---
+
+
     // --- Event Listeners ---
 
     // Header scroll effect
@@ -832,17 +984,6 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileSearchInput.value = ''; // Clear input
             document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
             mobileSearchResultsContainer.innerHTML = ''; // Clear search results
-        });
-    }
-
-    // Event listener for closing the video player overlay
-    if (closeVideoBtn) {
-        closeVideoBtn.addEventListener('click', closeVideoPlayer);
-        // Also close if clicking outside the video container
-        videoPlayerOverlay.addEventListener('click', (e) => {
-            if (e.target === videoPlayerOverlay) {
-                closeVideoPlayer();
-            }
         });
     }
 
