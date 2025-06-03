@@ -625,6 +625,7 @@ body {
         width: 100%;
         height: 100%;
         object-fit: cover; /* Ensure image covers the area */
+        object-position: top; /* CRITICAL: Crop image from the top */
         border-radius: 0.75rem 0.75rem 0 0; /* Rounded top corners */
     }
 
@@ -653,13 +654,14 @@ body {
         top: 0.75rem; /* Slightly more space from top */
         right: 0.75rem; /* Slightly more space from right */
         font-size: 2.5rem; /* Larger for easier tap */
-        background: rgba(0, 0, 0, 0.7); /* More visible background */
+        background: #e50914; /* Netflix red */
         border-radius: 50%;
         width: 3rem;
         height: 3rem;
         display: flex;
         align-items: center;
         justify-content: center;
+        color: white; /* Ensure X is white */
     }
 
     .detail-overlay-content .flex.space-x-4.mb-6 { /* Play & Add to List buttons */
