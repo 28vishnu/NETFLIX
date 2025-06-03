@@ -37,12 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailOverlayContainer = document.getElementById('detail-overlay-container');
     // messageBox is dynamically created/appended, so no need to get it here initially
 
-    // REMOVED: Mobile Bottom Navigation Search Elements (no longer needed)
-    // const mobileBottomNav = document.getElementById('mobile-bottom-nav');
-    // const mobileSearchToggleBtn = document.getElementById('mobile-search-toggle-btn');
-    // const mobileSearchInputWrapper = document.getElementById('mobile-search-input-wrapper');
-    // const mobileSearchInput = document.getElementById('mobile-search-input');
-
     // --- Global Variables ---
     let currentHeroSlide = 0;
     let heroInterval;
@@ -611,10 +605,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchToggleBtn && searchInputWrapper && searchInput) {
         searchToggleBtn.addEventListener('click', () => {
             console.log("Search toggle clicked.");
+            console.log("Initial searchInputWrapper classes:", searchInputWrapper.classList.value);
+            console.log("Current window width:", window.innerWidth);
+
             searchInputWrapper.classList.toggle('hidden');
+            console.log("searchInputWrapper classes AFTER toggle:", searchInputWrapper.classList.value);
+
+
             if (!searchInputWrapper.classList.contains('hidden')) {
+                console.log("Search input wrapper is now visible. Attempting to focus.");
                 searchInput.focus(); // Focus on input when shown
             } else {
+                console.log("Search input wrapper is now hidden. Clearing input and reloading home.");
                 searchInput.value = ''; // Clear input when hiding
                 loadContent('home'); // Reload home content if search is cleared/hidden
             }
