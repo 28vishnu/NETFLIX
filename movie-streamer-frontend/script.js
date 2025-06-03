@@ -24,8 +24,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Search Elements (now unified for desktop and mobile)
     const searchToggleBtn = document.getElementById('search-toggle-btn');
-    const searchInputWrapper = document.getElementById('search-input-wrapper');
-    const searchInput = document.getElementById('search-input');
+    const desktopSearchInputWrapper = document.getElementById('search-input-wrapper'); // Renamed for clarity
+    const desktopSearchInput = document.getElementById('search-input'); // Renamed for clarity
+
+    // New Mobile Search Overlay Elements
+    const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+    const mobileSearchInput = document.getElementById('mobile-search-input');
+    const closeSearchBtn = document.getElementById('close-search-btn');
+    const mobileSearchResultsContainer = document.getElementById('mobile-search-results-container');
+
 
     // Hero Section Elements
     const heroSection = document.getElementById('hero-section');
@@ -198,8 +205,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} title - The title of the section (e.g., "Trending Now").
      * @param {string} endpoint - The API endpoint to fetch data from.
      * @param {boolean} isGridCategory - If true, displays as a full grid instead of a scrollable carousel.
+     * @param {HTMLElement} [container=movieSectionsContainer] - Optional: The container to append the section to.
      */
-    const fetchAndDisplaySection = async (title, endpoint, isGridCategory = false) => {
+    const fetchAndDisplaySection = async (title, endpoint, isGridCategory = false, container = movieSectionsContainer) => {
         const sectionDiv = document.createElement('div');
         sectionDiv.className = 'movie-section mb-8';
         sectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">${title}</h2><div class="movie-row flex space-x-3 overflow-x-auto scrollbar-hide pb-4"></div>`;
@@ -239,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(`Failed to load content for "${title}" from our servers:`, error);
             movieRow.innerHTML = `<p class="text-red-500">Failed to load content for "${title}" from our servers. Please try again later.</p>`;
         }
-        movieSectionsContainer.appendChild(sectionDiv);
+        container.appendChild(sectionDiv); // Append to the specified container
     };
 
     /**
@@ -593,42 +601,71 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentType = link.dataset.content;
             loadContent(contentType);
 
-            // Hide search input if it was open when navigating
-            if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
-                searchInputWrapper.classList.add('hidden');
-                searchInput.value = ''; // Clear input when hiding
+            // Hide mobile search overlay if it was open when navigating
+            if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
+                mobileSearchOverlay.classList.remove('active');
+                mobileSearchInput.value = ''; // Clear input when hiding
+                document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
+                mobileSearchResultsContainer.innerHTML = ''; // Clear search results
             }
         });
     });
 
     // Search toggle and input functionality (unified for all screen sizes)
-    if (searchToggleBtn && searchInputWrapper && searchInput) {
+    if (searchToggleBtn) {
         searchToggleBtn.addEventListener('click', () => {
-            console.log("Search toggle clicked.");
-            console.log("Initial searchInputWrapper classes:", searchInputWrapper.classList.value);
-            console.log("Current window width:", window.innerWidth);
-
-            searchInputWrapper.classList.toggle('hidden');
-            console.log("searchInputWrapper classes AFTER toggle:", searchInputWrapper.classList.value);
-
-
-            if (!searchInputWrapper.classList.contains('hidden')) {
-                console.log("Search input wrapper is now visible. Attempting to focus.");
-                searchInput.focus(); // Focus on input when shown
+            // Check if it's a mobile view (using a breakpoint, e.g., 768px as defined in CSS)
+            if (window.innerWidth < 768) {
+                // Mobile search: activate full-screen overlay
+                mobileSearchOverlay.classList.toggle('active');
+                if (mobileSearchOverlay.classList.contains('active')) {
+                    mobileSearchInput.focus(); // Focus on input when shown
+                    document.body.classList.add('overflow-hidden'); // Prevent body scrolling
+                } else {
+                    mobileSearchInput.value = ''; // Clear input when hiding
+                    document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
+                    mobileSearchResultsContainer.innerHTML = ''; // Clear search results
+                }
             } else {
-                console.log("Search input wrapper is now hidden. Clearing input.");
-                searchInput.value = ''; // Clear input when hiding
-                // REMOVED: loadContent('home'); // This was causing the reload
+                // Desktop search: toggle in-header search input
+                desktopSearchInputWrapper.classList.toggle('hidden');
+                if (!desktopSearchInputWrapper.classList.contains('hidden')) {
+                    desktopSearchInput.focus(); // Focus on input when shown
+                } else {
+                    desktopSearchInput.value = ''; // Clear input when hiding
+                }
             }
         });
+    }
 
-        searchInput.addEventListener('keypress', async (e) => {
+    // Event listener for desktop search input (original #search-input)
+    if (desktopSearchInput) {
+        desktopSearchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
-                console.log("Search input: Enter pressed. Query:", searchInput.value.trim());
-                await handleSearch(searchInput.value.trim());
-                // Hide search input after search
-                searchInputWrapper.classList.add('hidden');
+                console.log("Desktop Search input: Enter pressed. Query:", desktopSearchInput.value.trim());
+                await handleSearch(desktopSearchInput.value.trim(), movieSectionsContainer); // Pass main container
+                desktopSearchInputWrapper.classList.add('hidden'); // Hide desktop search input after search
             }
+        });
+    }
+
+    // Event listener for mobile search input (#mobile-search-input)
+    if (mobileSearchInput) {
+        mobileSearchInput.addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                console.log("Mobile Search input: Enter pressed. Query:", mobileSearchInput.value.trim());
+                await handleSearch(mobileSearchInput.value.trim(), mobileSearchResultsContainer); // Pass mobile results container
+            }
+        });
+    }
+
+    // Event listener for mobile search close button
+    if (closeSearchBtn) {
+        closeSearchBtn.addEventListener('click', () => {
+            mobileSearchOverlay.classList.remove('active');
+            mobileSearchInput.value = ''; // Clear input
+            document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
+            mobileSearchResultsContainer.innerHTML = ''; // Clear search results
         });
     }
 
@@ -636,11 +673,12 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Handles the search logic for both desktop and mobile search inputs.
      * @param {string} query - The search query.
+     * @param {HTMLElement} targetContainer - The container to display search results in.
      */
-    const handleSearch = async (query) => {
-        console.log("handleSearch called with query:", query);
+    const handleSearch = async (query, targetContainer) => {
+        console.log("handleSearch called with query:", query, "targetContainer:", targetContainer.id);
         if (query.length > 2) { // Require at least 3 characters for search
-            movieSectionsContainer.innerHTML = ''; // Clear existing content
+            targetContainer.innerHTML = ''; // Clear existing content
             heroSection.classList.add('hidden-hero'); // Hide hero during search
             clearInterval(heroInterval); // Stop hero carousel
 
@@ -665,21 +703,26 @@ document.addEventListener('DOMContentLoaded', () => {
                             searchGrid.appendChild(createMovieCard(item));
                         }
                     });
-                    movieSectionsContainer.appendChild(searchSectionDiv); // Append the new search section
+                    targetContainer.appendChild(searchSectionDiv); // Append the new search section
                 } else {
                     const noResultsDiv = document.createElement('div');
                     noResultsDiv.className = 'movie-section p-4 md:p-8 text-center text-gray-400';
                     noResultsDiv.innerHTML = `<p>No results found for "${query}" with valid images.</p>`;
-                    movieSectionsContainer.appendChild(noResultsDiv);
+                    targetContainer.appendChild(noResultsDiv);
                 }
             } catch (error) {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'movie-section p-4 md:p-8 pt-20 text-center text-red-500';
                 errorDiv.innerHTML = `<p>Error performing search for "${query}". Please try again later.</p>`;
-                movieSectionsContainer.appendChild(errorDiv);
+                targetContainer.appendChild(errorDiv);
                 console.error('Search error:', error);
             } finally {
                 hideLoading(); // Ensure loading indicator is hidden after search
+                // For mobile, close the overlay after search
+                if (window.innerWidth < 768) {
+                    mobileSearchOverlay.classList.remove('active');
+                    document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
+                }
             }
         } else {
             showMessageBox('Please enter at least 3 characters for search.', 'info');
@@ -701,11 +744,19 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading();
         movieSectionsContainer.innerHTML = ''; // Clear previous content
 
-        // Hide search input wrapper when changing content type
-        if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
-            searchInputWrapper.classList.add('hidden');
-            searchInput.value = '';
+        // Hide mobile search overlay if it was open when changing content type
+        if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
+            mobileSearchOverlay.classList.remove('active');
+            mobileSearchInput.value = '';
+            document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
+            mobileSearchResultsContainer.innerHTML = ''; // Clear search results
         }
+        // Hide desktop search input if it was open
+        if (desktopSearchInputWrapper && !desktopSearchInputWrapper.classList.contains('hidden')) {
+            desktopSearchInputWrapper.classList.add('hidden');
+            desktopSearchInput.value = '';
+        }
+
 
         // Hide hero section for non-home pages
         if (heroSection) { // Check if heroSection exists
@@ -762,6 +813,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 removeFromMyList(item.imdbID);
                             });
                             card.appendChild(removeBtn);
+                            mylistGrid.appendChild(card); // Append the card to the grid
                         });
                         movieSectionsContainer.appendChild(mylistSection);
                     } else {
