@@ -57,9 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.log('Existing user ID:', userId);
     }
-    // Display user ID (for debugging/identification in multi-user apps)
+    // REMOVED: Display user ID. User requested to remove this.
     if (userDetailsSpan) {
-        userDetailsSpan.textContent = `User: ${userId.substring(0, 8)}...`; // Show truncated ID
+        userDetailsSpan.textContent = `Guest`; // Always display "Guest"
     }
 
 
@@ -152,6 +152,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
+     * Validates if a poster URL is likely usable.
+     * @param {string} url - The poster URL string.
+     * @returns {boolean} True if the URL seems valid, false otherwise.
+     */
+    const isValidPosterUrl = (url) => {
+        if (!url || typeof url !== 'string') {
+            return false;
+        }
+        const trimmedUrl = url.trim();
+        // Check for common invalid strings and minimum length for a URL
+        return trimmedUrl !== '' &&
+               trimmedUrl.toLowerCase() !== 'n/a' &&
+               trimmedUrl.toLowerCase() !== 'null' &&
+               trimmedUrl.toLowerCase() !== 'undefined' &&
+               trimmedUrl.length > 10; // Simple check: a URL is usually longer than this
+    };
+
+    /**
      * Creates a movie/series card element.
      * @param {object} item - The movie/series data object.
      * @returns {HTMLElement} The created movie card div.
@@ -163,21 +181,11 @@ document.addEventListener('DOMContentLoaded', () => {
         card.dataset.type = item.type; // Store type (movie/series)
 
         // Determine poster URL with robust fallback handling
-        let posterUrl = item.poster;
-        if (!posterUrl || // Checks for null, undefined, empty string
-            posterUrl === 'N/A' || // Checks for the specific 'N/A' string
-            posterUrl.toLowerCase() === 'null' || // Checks for string "null"
-            posterUrl.toLowerCase() === 'undefined' || // Checks for string "undefined"
-            posterUrl.trim() === '' // Checks for whitespace-only strings
-        ) {
-            // Fallback to placehold.co with the movie title
-            posterUrl = `https://placehold.co/300x450/000000/FFFFFF?text=${encodeURIComponent(item.title || 'No Title')}`;
-        }
-        // console.log(`Card for ${item.title}: Final Poster URL is ${posterUrl}`); // Uncomment for debugging
+        const posterUrl = isValidPosterUrl(item.poster) ? item.poster : `https://placehold.co/300x450/000000/FFFFFF?text=${encodeURIComponent(item.title || 'No Title')}`;
 
         card.innerHTML = `
             <img src="${posterUrl}" alt="${item.title || 'No Title'} Poster" class="w-full h-48 md:h-60 lg:h-72 object-cover rounded-md"
-                 onerror="this.onerror=null;this.src='https://placehold.co/300x450/000000/FFFFFF?text=Image+Missing'; console.error('Image failed to load for: ${item.title || 'No Title'} (${item.imdbID})');">
+                 onerror="this.onerror=null;this.src='https://placehold.co/300x450/000000/FFFFFF?text=Image+Missing'; console.error('Image failed to load for: ${item.title || 'No Title'} (${item.imdbID || 'N/A'}) - Original URL: ${item.poster || 'N/A'}');">
             <div class="movie-card-info absolute bottom-0 left-0 right-0 p-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black via-black/70 to-transparent">
                 <h3 class="text-sm md:text-base font-semibold truncate">${item.title || 'No Title'}</h3>
                 <p class="text-xs text-gray-400">${item.year || 'N/A'}</p>
@@ -213,25 +221,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let itemsToDisplay = [];
             if (endpoint.includes('/api/search')) {
-                // Search results come as { movies: [], series: [] }
                 itemsToDisplay = [...(data.movies || []), ...(data.series || [])];
             } else if (endpoint.includes('/api/mylist')) {
-                // My list returns { userId: ..., items: [] }
                 itemsToDisplay = data.items || [];
             } else {
-                // Other endpoints return direct arrays
                 itemsToDisplay = data;
             }
 
-            if (itemsToDisplay && itemsToDisplay.length > 0) {
-                itemsToDisplay.forEach(item => {
+            // NEW: Filter out items with invalid poster URLs before rendering
+            const filteredItems = itemsToDisplay.filter(item => isValidPosterUrl(item.poster));
+
+            if (filteredItems && filteredItems.length > 0) {
+                filteredItems.forEach(item => {
                     // Ensure item has imdbID and type before creating card
                     if (item.imdbID && item.type) {
                         movieRow.appendChild(createMovieCard(item));
                     }
                 });
             } else {
-                movieRow.innerHTML = `<p class="text-gray-400">No content found for "${title}".</p>`;
+                movieRow.innerHTML = `<p class="text-gray-400">No content found for "${title}" with valid images.</p>`;
             }
         } catch (error) {
             console.error(`Failed to load content for "${title}" from our servers:`, error);
@@ -253,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data) {
                 // Populate overlay with data
-                const overlayPosterUrl = data.poster && data.poster !== 'N/A' ? data.poster : `https://placehold.co/400x600/000000/FFFFFF?text=No+Image`;
+                const overlayPosterUrl = isValidPosterUrl(data.poster) ? data.poster : `https://placehold.co/400x600/000000/FFFFFF?text=No+Image`;
                 detailOverlayContainer.innerHTML = `
                     <div class="detail-overlay-content relative bg-[#1a1a1a] rounded-lg shadow-xl max-w-4xl w-full flex flex-col md:flex-row overflow-hidden">
                         <button class="absolute top-3 right-3 text-white text-3xl font-bold z-10 close-overlay-btn">
@@ -356,70 +364,79 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await fetchData(`${API_BASE_URL}/movies/trending`);
 
             if (data && data.length > 0) {
-                console.log(`Found ${data.length} trending movies for hero section.`);
-                // Take top 5 for hero slides
-                const heroMovies = data.slice(0, 5);
-                heroSlidesContainer.innerHTML = '';
-                heroDotsContainer.innerHTML = '';
+                // NEW: Filter out hero movies with invalid poster URLs
+                const heroMovies = data.filter(item => isValidPosterUrl(item.poster)).slice(0, 5); // Take top 5 valid ones
 
-                heroMovies.forEach((movie, index) => {
-                    const slide = document.createElement('div');
-                    slide.className = 'hero-slide';
-                    const slidePosterUrl = movie.poster && movie.poster !== 'N/A' ? movie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image';
-                    slide.style.backgroundImage = `url('${slidePosterUrl}')`;
-                    slide.dataset.imdbId = movie.imdbID;
-                    slide.dataset.type = movie.type;
+                if (heroMovies.length > 0) {
+                    console.log(`Found ${heroMovies.length} valid trending movies for hero section.`);
+                    heroSlidesContainer.innerHTML = '';
+                    heroDotsContainer.innerHTML = '';
 
-                    slide.innerHTML = `
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
-                        <div class="hero-text-content">
-                            <h1 class="text-4xl md:text-6xl font-bold mb-4">${movie.title || 'No Title'}</h1>
-                            <p class="text-lg md:text-xl mb-6 line-clamp-3">${movie.plot || 'No description available.'}</p>
-                            <div class="flex space-x-4">
-                                <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}">
-                                    <i class="fas fa-play mr-2"></i> Play
-                                </button>
-                                <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
-                                    <i class="fas fa-plus mr-2"></i> My List
-                                </button>
+                    heroMovies.forEach((movie, index) => {
+                        const slide = document.createElement('div');
+                        slide.className = 'hero-slide';
+                        const slidePosterUrl = isValidPosterUrl(movie.poster) ? movie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image';
+                        slide.style.backgroundImage = `url('${slidePosterUrl}')`;
+                        slide.dataset.imdbId = movie.imdbID;
+                        slide.dataset.type = movie.type;
+
+                        slide.innerHTML = `
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
+                            <div class="hero-text-content">
+                                <h1 class="text-4xl md:text-6xl font-bold mb-4">${movie.title || 'No Title'}</h1>
+                                <p class="text-lg md:text-xl mb-6 line-clamp-3">${movie.plot || 'No description available.'}</p>
+                                <div class="flex space-x-4">
+                                    <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}">
+                                        <i class="fas fa-play mr-2"></i> Play
+                                    </button>
+                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
+                                        <i class="fas fa-plus mr-2"></i> My List
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    heroSlidesContainer.appendChild(slide);
+                        `;
+                        heroSlidesContainer.appendChild(slide);
 
-                    const dot = document.createElement('div');
-                    dot.className = `w-3 h-3 bg-gray-500 rounded-full cursor-pointer transition-colors ${index === 0 ? 'bg-white' : ''}`;
-                    dot.dataset.slideIndex = index;
-                    dot.addEventListener('click', () => goToSlide(index));
-                    heroDotsContainer.appendChild(dot);
-                });
-
-                // Add event listeners for buttons within hero slides
-                heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        showMessageBox(`Playing ${e.currentTarget.dataset.title || 'content'} (feature coming soon!)`, 'info');
+                        const dot = document.createElement('div');
+                        dot.className = `w-3 h-3 bg-gray-500 rounded-full cursor-pointer transition-colors ${index === 0 ? 'bg-white' : ''}`;
+                        dot.dataset.slideIndex = index;
+                        dot.addEventListener('click', () => goToSlide(index));
+                        heroDotsContainer.appendChild(dot);
                     });
-                });
-                heroSlidesContainer.querySelectorAll('.add-to-list-btn').forEach(btn => {
-                    btn.addEventListener('click', async (e) => {
-                        const itemToAdd = {
-                            imdbID: e.currentTarget.dataset.imdbId,
-                            title: e.currentTarget.dataset.title,
-                            poster: e.currentTarget.dataset.poster,
-                            type: e.currentTarget.dataset.type,
-                            year: e.currentTarget.dataset.year
-                        };
-                        await addToMyList(itemToAdd);
+
+                    // Add event listeners for buttons within hero slides
+                    heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            showMessageBox(`Playing ${e.currentTarget.dataset.title || 'content'} (feature coming soon!)`, 'info');
+                        });
                     });
-                });
+                    heroSlidesContainer.querySelectorAll('.add-to-list-btn').forEach(btn => {
+                        btn.addEventListener('click', async (e) => {
+                            const itemToAdd = {
+                                imdbID: e.currentTarget.dataset.imdbId,
+                                title: e.currentTarget.dataset.title,
+                                poster: e.currentTarget.dataset.poster,
+                                type: e.currentTarget.dataset.type,
+                                year: e.currentTarget.dataset.year
+                            };
+                            await addToMyList(itemToAdd);
+                        });
+                    });
 
 
-                startHeroCarousel();
+                    startHeroCarousel();
+                } else {
+                    console.log("No valid trending movies with images found for hero section. Hiding hero.");
+                    if (heroSection) {
+                        heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies with valid images found for hero section.</p>';
+                        heroSection.classList.add('hidden-hero'); // Ensure it's hidden if no valid content
+                    }
+                }
             } else {
-                console.log("No trending movies found for hero section. Hiding hero.");
+                console.log("No trending movies found from backend. Hiding hero.");
                 if (heroSection) { // Check if heroSection exists before manipulating
                     heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies found for hero section.</p>';
-                    heroSection.classList.add('hidden-hero'); // Ensure it's hidden if no content
+                    heroSection.classList.add('hidden-hero'); // Hide if no data
                 }
             }
         } catch (error) {
@@ -665,14 +682,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
                 console.log("Search results received:", allResults);
 
-                if (allResults.length > 0) {
+                // NEW: Filter search results to only show items with valid images
+                const filteredResults = allResults.filter(item => isValidPosterUrl(item.poster));
+
+                if (filteredResults.length > 0) {
                     // Create a new section for search results
                     const searchSectionDiv = document.createElement('div');
                     searchSectionDiv.className = 'movie-section mb-8';
                     searchSectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">Search Results for "${query}"</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
                     const searchGrid = searchSectionDiv.querySelector('.movie-grid-category');
 
-                    allResults.forEach(item => {
+                    filteredResults.forEach(item => {
                         if (item.imdbID && item.type) {
                             searchGrid.appendChild(createMovieCard(item));
                         }
@@ -681,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const noResultsDiv = document.createElement('div');
                     noResultsDiv.className = 'movie-section p-4 md:p-8 text-center text-gray-400';
-                    noResultsDiv.innerHTML = `<p>No results found for "${query}".</p>`;
+                    noResultsDiv.innerHTML = `<p>No results found for "${query}" with valid images.</p>`;
                     movieSectionsContainer.appendChild(noResultsDiv);
                 }
             } catch (error) {
@@ -763,21 +783,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     mylistSection.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">My List</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
                     const mylistGrid = mylistSection.querySelector('.movie-grid-category');
 
-                    userList.items.forEach(item => {
-                        const card = createMovieCard(item);
-                        // Add a remove button to my list items
-                        const removeBtn = document.createElement('button');
-                        removeBtn.className = 'absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300';
-                        removeBtn.innerHTML = `<i class="fas fa-times"></i>`;
-                        removeBtn.title = `Remove ${item.title} from My List`;
-                        removeBtn.addEventListener('click', (e) => {
-                            e.stopPropagation(); // Prevent card click from opening detail overlay
-                            removeFromMyList(item.imdbID);
+                    // NEW: Filter My List items to only show those with valid images
+                    const filteredMyListItems = userList.items.filter(item => isValidPosterUrl(item.poster));
+
+                    if (filteredMyListItems.length > 0) {
+                        filteredMyListItems.forEach(item => {
+                            const card = createMovieCard(item);
+                            // Add a remove button to my list items
+                            const removeBtn = document.createElement('button');
+                            removeBtn.className = 'absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300';
+                            removeBtn.innerHTML = `<i class="fas fa-times"></i>`;
+                            removeBtn.title = `Remove ${item.title} from My List`;
+                            removeBtn.addEventListener('click', (e) => {
+                                e.stopPropagation(); // Prevent card click from opening detail overlay
+                                removeFromMyList(item.imdbID);
+                            });
+                            card.appendChild(removeBtn);
+                            mylistGrid.appendChild(card);
                         });
-                        card.appendChild(removeBtn);
-                        mylistGrid.appendChild(card);
-                    });
-                    movieSectionsContainer.appendChild(mylistSection);
+                        movieSectionsContainer.appendChild(mylistSection);
+                    } else {
+                        const noContentDiv = document.createElement('div');
+                        noContentDiv.className = 'movie-section p-4 md:p-8 text-center text-gray-400';
+                        noContentDiv.innerHTML = `<p class="text-lg">Your list is empty or contains no items with valid images. Add movies or series to your list!</p>`;
+                        movieSectionsContainer.appendChild(noContentDiv);
+                    }
                 } else {
                     const noContentDiv = document.createElement('div');
                     noContentDiv.className = 'movie-section p-4 md:p-8 text-center text-gray-400';
