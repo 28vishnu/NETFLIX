@@ -9,29 +9,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Base URL for your backend API
     const API_BASE_URL = 'https://netflix-ydfu.onrender.com/api'; // *** Ensure this is your Render backend URL ***
-    // OMDb API Key is not directly used in frontend as backend handles OMDb calls now
-    const OMDB_API_KEY = 'YOUR_OMDB_API_KEY'; // Kept for reference, but backend handles OMDb calls now
+    // OMDb API Key for fetching hero section details directly (not used in this version as backend fetches details)
+    const OMDB_API_KEY = '48bff862'; // Kept for reference, but backend handles OMDb calls now
 
     // --- DOM Element References ---
     const movieSectionsContainer = document.getElementById('movie-sections');
     const loadingIndicator = document.getElementById('loading-indicator');
     const userDetailsSpan = document.querySelector('#user-details span');
+    const userProfileImg = document.querySelector('#user-details img');
     const header = document.getElementById('main-header');
 
     // Select all nav links (both desktop and new mobile bottom nav)
     const navLinks = document.querySelectorAll('.nav-link');
 
-    // Search Elements
+    // Search Elements (now unified for desktop and mobile)
     const searchToggleBtn = document.getElementById('search-toggle-btn');
-    const desktopSearchInputWrapper = document.getElementById('search-input-wrapper');
-    const desktopSearchInput = document.getElementById('desktop-search-input'); // Renamed ID in HTML
-
-    // Mobile Search Overlay Elements
-    const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
-    const mobileSearchInput = document.getElementById('mobile-search-input');
-    const closeSearchBtn = document.getElementById('close-search-btn');
-    const mobileSearchResultsContainer = document.getElementById('mobile-search-results-container');
-
+    const searchInputWrapper = document.getElementById('search-input-wrapper');
+    const searchInput = document.getElementById('search-input');
 
     // Hero Section Elements
     const heroSection = document.getElementById('hero-section');
@@ -41,39 +35,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroDotsContainer = document.getElementById('hero-dots-container');
 
     const detailOverlayContainer = document.getElementById('detail-overlay-container');
-    const videoPlayerOverlay = document.getElementById('video-player-overlay');
-    const moviePlayer = document.getElementById('movie-player');
-    const closeVideoBtn = document.querySelector('#video-player-overlay .close-video-btn');
-
-    // Custom Player Controls Elements
-    const playPauseBtn = document.getElementById('play-pause-btn');
-    const rewindBtn = document.getElementById('rewind-btn'); // New
-    const forwardBtn = document.getElementById('forward-btn'); // New
-    const progressBarContainer = document.querySelector('.progress-bar-container');
-    const progressBarFill = document.querySelector('.progress-bar-fill');
-    const progressBarHandle = document.querySelector('.progress-bar-handle');
-    const currentTimeSpan = document.getElementById('current-time');
-    const durationSpan = document.getElementById('duration');
-    const volumeBtn = document.getElementById('volume-btn');
-    const volumeSlider = document.getElementById('volume-slider');
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const playerControls = document.querySelector('.player-controls');
-
-    // New Audio/Subtitle Elements
-    const audioTrackBtn = document.getElementById('audio-track-btn');
-    const audioTrackOptions = document.getElementById('audio-track-options');
-    const subtitleBtn = document.getElementById('subtitle-btn');
-    const subtitleOptions = document.getElementById('subtitle-options');
-
+    // messageBox is dynamically created/appended, so no need to get it here initially
 
     // --- Global Variables ---
     let currentHeroSlide = 0;
     let heroInterval;
     let lastScrollY = 0; // For header hide/show on scroll
     let userId = localStorage.getItem('netflixCloneUserId'); // Get user ID from local storage
-    // Check for admin mode (simple frontend check)
-    const isAdminMode = window.location.search.includes('admin=true');
-
 
     // Generate a unique user ID if one doesn't exist (for My List persistence)
     if (!userId) {
@@ -83,9 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.log('Existing user ID:', userId);
     }
-    // Always display "Guest" for the user name
+    // REMOVED: Display user ID. User requested to remove this.
     if (userDetailsSpan) {
-        userDetailsSpan.textContent = `Guest`;
+        userDetailsSpan.textContent = `Guest`; // Always display "Guest"
     }
 
 
@@ -109,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingIndicator.style.opacity = '0';
             setTimeout(() => {
                 loadingIndicator.classList.add('hidden');
-            }, 300); // Matches CSS transition duration
+            }, 300); // Matches CSS transition
         }
     };
 
@@ -122,14 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const showMessageBox = (message, type = 'info', duration = 3000) => {
         let messageBox = document.getElementById('message-box');
         if (!messageBox) {
-             // Create it if it doesn't exist
+             // Create it if it doesn't exist (e.g., if it was removed after a previous message)
             messageBox = document.createElement('div');
             messageBox.id = 'message-box';
             document.body.appendChild(messageBox);
         }
 
         messageBox.textContent = message;
-        // Reset classes to ensure only one type class is applied
         messageBox.className = `fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-semibold text-center z-[9999] opacity-0 transition-opacity duration-300`;
 
         if (type === 'success') {
@@ -155,16 +122,16 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Fetches data from a given URL with loading indicators.
+     * Fetches data from a given URL.
+     * IMPORTANT: This function no longer manages loading indicators.
+     * Loading indicators are now managed by the calling function (e.g., loadContent).
      * @param {string} url - The URL to fetch from.
      * @returns {Promise<Object>} - A promise that resolves to the JSON data.
      */
     async function fetchData(url) {
-        showLoading();
         try {
             const response = await fetch(url);
             if (!response.ok) {
-                // Try to parse error message from backend if available
                 const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
                 console.error(`HTTP error! Status: ${response.status}, URL: ${url}, Message: ${errorData.error || errorData.message || response.statusText}`);
                 throw new Error(`Failed to fetch data from ${url}: ${errorData.error || errorData.message || response.statusText}`);
@@ -173,8 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Fetch error:', error);
             throw error;
-        } finally {
-            hideLoading();
         }
     }
 
@@ -195,36 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
                trimmedUrl.toLowerCase() !== 'undefined' &&
                trimmedUrl.length > 10; // Simple check: a URL is usually longer than this
     };
-
-    /**
-     * Checks if a URL is likely a direct video file URL based on common extensions and domains.
-     * This is a heuristic and might not cover all cases or streaming protocols.
-     * @param {string} url - The URL to check.
-     * @returns {boolean} True if it looks like a direct video file, false otherwise.
-     */
-    const isDirectVideoUrl = (url) => {
-        if (!url || typeof url !== 'string') return false;
-        const lowerUrl = url.toLowerCase();
-        // Common video extensions
-        const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv', '.flv', '.wmv'];
-        // Common direct file hosting domains (can be expanded)
-        const directFileHosts = ['cdn.telegram-cloud.org', 'video.googleusercontent.com', 'drive.google.com/uc?export=download'];
-
-        // Check if URL ends with a video extension
-        if (videoExtensions.some(ext => lowerUrl.endsWith(ext))) {
-            return true;
-        }
-        // Check if URL contains a known direct file host
-        if (directFileHosts.some(host => lowerUrl.includes(host))) {
-            return true;
-        }
-        // If it's a t.me link, it's likely a web player, not a direct file
-        if (lowerUrl.includes('t.me/')) {
-            return false;
-        }
-        return false; // Default to false if not clearly a direct video
-    };
-
 
     /**
      * Creates a movie/series card element.
@@ -261,9 +196,9 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} title - The title of the section (e.g., "Trending Now").
      * @param {string} endpoint - The API endpoint to fetch data from.
      * @param {boolean} isGridCategory - If true, displays as a full grid instead of a scrollable carousel.
-     * @param {HTMLElement} [container=movieSectionsContainer] - Optional: The container to append the section to.
+     * @returns {Promise<void>} A promise that resolves when the section is displayed.
      */
-    const fetchAndDisplaySection = async (title, endpoint, isGridCategory = false, container = movieSectionsContainer) => {
+    const fetchAndDisplaySection = async (title, endpoint, isGridCategory = false) => {
         const sectionDiv = document.createElement('div');
         sectionDiv.className = 'movie-section mb-8';
         sectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">${title}</h2><div class="movie-row flex space-x-3 overflow-x-auto scrollbar-hide pb-4"></div>`;
@@ -275,7 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            const data = await fetchData(endpoint); // fetchData already handles loading indicator
+            const data = await fetchData(endpoint); // fetchData no longer manages loading indicator
 
             let itemsToDisplay = [];
             if (endpoint.includes('/api/search')) {
@@ -303,58 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(`Failed to load content for "${title}" from our servers:`, error);
             movieRow.innerHTML = `<p class="text-red-500">Failed to load content for "${title}" from our servers. Please try again later.</p>`;
         }
-        container.appendChild(sectionDiv); // Append to the specified container
+        movieSectionsContainer.appendChild(sectionDiv);
     };
-
-    /**
-     * Displays the video player overlay.
-     * @param {string} videoUrl - The URL of the video to play.
-     * @param {string} title - The title of the content.
-     */
-    const openVideoPlayer = (videoUrl, title) => {
-        // Check if the URL is a direct video file. If not, open in new tab.
-        if (!isDirectVideoUrl(videoUrl)) {
-            showMessageBox(`This link cannot be played directly within the app. Opening in a new tab.`, 'info');
-            window.open(videoUrl, '_blank');
-            return;
-        }
-
-        moviePlayer.src = videoUrl;
-        // Reset player state
-        moviePlayer.currentTime = 0;
-        moviePlayer.volume = 1; // Reset volume
-        volumeSlider.value = 1;
-        moviePlayer.muted = false;
-        volumeBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>'; // Set to play icon initially
-
-        moviePlayer.load(); // Load the video
-        moviePlayer.play().catch(error => {
-            console.error('Error playing video automatically:', error);
-            showMessageBox('Failed to play video automatically. Please try manually or check the link.', 'error');
-        });
-
-        videoPlayerOverlay.classList.add('active');
-        videoPlayerOverlay.style.display = 'flex'; // Ensure display is flex for transition
-        document.body.classList.add('overflow-hidden'); // Prevent scrolling body
-        showMessageBox(`Playing: ${title}`, 'info');
-    };
-
-    /**
-     * Closes the video player overlay.
-     */
-    const closeVideoPlayer = () => {
-        moviePlayer.pause();
-        moviePlayer.currentTime = 0; // Reset video to start
-        moviePlayer.src = ''; // Clear source to stop loading/playing
-
-        videoPlayerOverlay.classList.remove('active');
-        setTimeout(() => {
-            videoPlayerOverlay.style.display = 'none'; // Hide completely after transition
-            document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
-        }, 300); // Matches CSS transition duration
-    };
-
 
     /**
      * Fetches details for a specific movie/series and displays them in an overlay.
@@ -362,37 +247,14 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} type - The type of content ('movie' or 'series').
      */
     const showDetailsOverlay = async (imdbId, type) => {
-        showLoading(); // Show loading indicator
+        showLoading(); // Show loading indicator at the start of overlay load
         try {
             const endpoint = `${API_BASE_URL}/${type}s/${imdbId}`; // e.g., /api/movies/tt1234567
-            const data = await fetchData(endpoint);
+            const data = await fetchData(endpoint); // fetchData no longer manages loading indicator
 
             if (data) {
-                // Determine poster URL with robust fallback handling
+                // Populate overlay with data
                 const overlayPosterUrl = isValidPosterUrl(data.poster) ? data.poster : `https://placehold.co/400x600/000000/FFFFFF?text=No+Image`;
-
-                // Determine play button text and if it's disabled
-                const playButtonText = data.telegramPlayableUrl ? 'Play' : 'No Playable Link';
-                const playButtonClasses = data.telegramPlayableUrl
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-gray-500 cursor-not-allowed';
-                const playButtonDisabled = !data.telegramPlayableUrl;
-
-                // Admin section HTML (conditionally rendered based on isAdminMode)
-                const adminSectionHtml = isAdminMode ? `
-                    <div class="mt-4 p-4 bg-gray-800 rounded-md">
-                        <h3 class="text-lg font-semibold mb-2">Set Playable URL (Admin)</h3>
-                        <input type="url" id="playable-url-input" placeholder="Paste Telegram playable URL here"
-                               class="w-full bg-gray-700 text-white px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                               value="${data.telegramPlayableUrl || ''}">
-                        <button id="save-playable-url-btn"
-                                class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-700 transition-colors">
-                            Save Playable URL
-                        </button>
-                    </div>
-                ` : '';
-
-
                 detailOverlayContainer.innerHTML = `
                     <div class="detail-overlay-content relative bg-[#1a1a1a] rounded-lg shadow-xl max-w-4xl w-full flex flex-col md:flex-row overflow-hidden">
                         <button class="absolute top-3 right-3 text-white text-3xl font-bold z-10 close-overlay-btn">
@@ -407,9 +269,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${data.year || 'N/A'} | ${data.rated || 'N/A'} | ${data.runtime || 'N/A'} | ${Array.isArray(data.genre) ? data.genre.join(', ') : data.genre || 'N/A'}
                             </p>
                             <p class="mb-4 text-base">${data.plot || 'No plot available.'}</p>
+                            <div class="flex flex-col space-y-4 mb-6"> <button class="bg-white text-black px-6 py-3 rounded-md font-semibold hover:bg-gray-300 transition-colors flex items-center justify-center w-full play-btn">
+                                    <i class="fas fa-play mr-2"></i> Play
+                                </button>
+                                <button class="bg-gray-700 text-white px-6 py-3 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center justify-center w-full add-to-list-btn" data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
+                                    <i class="fas fa-plus mr-2"></i> Add to My List
+                                </button>
+                            </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-6">
                                 <p><strong>Director:</strong> ${data.director || 'N/A'}</p>
-                                <p><strong>Writer:</b> ${data.writer || 'N/A'}</p>
+                                <p><strong>Writer:</strong> ${data.writer || 'N/A'}</p>
                                 <p><strong>Actors:</strong> ${data.actors || 'N/A'}</p>
                                 <p><strong>Language:</strong> ${data.language || 'N/A'}</p>
                                 <p><strong>Country:</strong> ${data.country || 'N/A'}</p>
@@ -418,16 +287,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>IMDb ID:</strong> ${data.imdbID || 'N/A'}</p>
                                 ${type === 'series' && data.totalSeasons ? `<p><strong>Total Seasons:</strong> ${data.totalSeasons}</p>` : ''}
                             </div>
-                            <div class="flex space-x-4 mb-6">
-                                <button class="text-white px-6 py-2 rounded-md font-semibold transition-colors flex items-center play-btn ${playButtonClasses}"
-                                    data-imdb-id="${data.imdbID}" data-type="${data.type}" data-title="${data.title}" data-url="${data.telegramPlayableUrl || ''}" ${playButtonDisabled ? 'disabled' : ''}>
-                                    <i class="fas fa-play mr-2"></i> ${playButtonText}
-                                </button>
-                                <button class="bg-gray-700 text-white px-6 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
-                                    <i class="fas fa-plus mr-2"></i> Add to My List
-                                </button>
-                            </div>
-                            ${adminSectionHtml}
                         </div>
                     </div>
                 `;
@@ -445,20 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 });
 
-                // Play button functionality
-                const playBtn = detailOverlayContainer.querySelector('.play-btn');
-                if (playBtn) {
-                    playBtn.addEventListener('click', (e) => {
-                        const url = e.currentTarget.dataset.url;
-                        const title = e.currentTarget.dataset.title;
-                        if (url) {
-                            openVideoPlayer(url, title); // Use the new video player function
-                        } else {
-                            showMessageBox('No playable link available for this content.', 'info');
-                        }
-                    });
-                }
-
                 // Add to My List button functionality
                 const addToListBtn = detailOverlayContainer.querySelector('.add-to-list-btn');
                 if (addToListBtn) {
@@ -474,22 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // Save Playable URL button functionality (only if admin section is visible)
-                if (isAdminMode) {
-                    const savePlayableUrlBtn = detailOverlayContainer.querySelector('#save-playable-url-btn');
-                    if (savePlayableUrlBtn) {
-                        savePlayableUrlBtn.addEventListener('click', async () => {
-                            const urlInput = document.getElementById('playable-url-input');
-                            const newUrl = urlInput.value.trim();
-                            if (newUrl) {
-                                await setPlayableUrl(imdbId, type, newUrl);
-                            } else {
-                                showMessageBox('Please enter a valid URL.', 'error');
-                            }
-                        });
-                    }
-                }
-
             } else {
                 console.error('No data received for details overlay.');
                 showMessageBox('Error fetching details: No data received.', 'error');
@@ -499,43 +328,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error fetching details:', error);
             showMessageBox('Error fetching details. Please try again.', 'error');
         } finally {
-            hideLoading(); // Always hide loading indicator
+            hideLoading(); // Always hide loading indicator after overlay details are fetched
         }
     };
-
-    /**
-     * Sends a request to the backend to set/update the playable URL for an item.
-     * @param {string} imdbId - The IMDb ID of the movie/series.
-     * @param {string} type - The type of content ('movie' or 'series').
-     * @param {string} url - The new playable URL to save.
-     */
-    const setPlayableUrl = async (imdbId, type, url) => {
-        showLoading();
-        try {
-            const response = await fetch(`${API_BASE_URL}/${type}s/${imdbId}/set-playable-url`, {
-                method: 'PUT', // Use PUT for updating an existing resource
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ url }),
-            });
-
-            const result = await response.json();
-            if (response.ok) {
-                showMessageBox(result.message || 'Playable URL saved successfully!', 'success');
-                // Re-fetch details to update the overlay with the new URL and enable play button
-                showDetailsOverlay(imdbId, type);
-            } else {
-                showMessageBox(result.message || 'Failed to save playable URL.', 'error');
-            }
-        } catch (error) {
-            console.error('Error saving playable URL:', error);
-            showMessageBox('Error saving playable URL. Please check your backend.', 'error');
-        } finally {
-            hideLoading();
-        }
-    };
-
 
     /**
      * Closes the detail overlay.
@@ -553,16 +348,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Hero Section (Carousel) Functions ---
     /**
      * Fetches hero movies and populates the hero section.
+     * @returns {Promise<void>} A promise that resolves when hero content is fetched and displayed.
      */
     const fetchHeroMovies = async () => {
         console.log("Fetching hero movies...");
         try {
-            // Fetch trending movies from your backend
             const data = await fetchData(`${API_BASE_URL}/movies/trending`);
 
             if (data && data.length > 0) {
-                // Filter out hero movies with invalid poster URLs
-                const heroMovies = data.filter(item => isValidPosterUrl(item.poster)).slice(0, 5); // Take top 5 valid ones
+                const heroMovies = data.filter(item => isValidPosterUrl(item.poster)).slice(0, 5);
 
                 if (heroMovies.length > 0) {
                     console.log(`Found ${heroMovies.length} valid trending movies for hero section.`);
@@ -577,25 +371,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         slide.dataset.imdbId = movie.imdbID;
                         slide.dataset.type = movie.type;
 
-                        // Determine play button text and if it's disabled for hero section
-                        const heroPlayButtonText = movie.telegramPlayableUrl ? 'Play' : 'No Link';
-                        const heroPlayButtonClasses = movie.telegramPlayableUrl
-                            ? 'bg-white text-black hover:bg-gray-300'
-                            : 'bg-gray-500 text-gray-300 cursor-not-allowed';
-                        const heroPlayButtonDisabled = !movie.telegramPlayableUrl;
-
-
                         slide.innerHTML = `
                             <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
                             <div class="hero-text-content">
                                 <h1 class="text-4xl md:text-6xl font-bold mb-4">${movie.title || 'No Title'}</h1>
                                 <p class="text-lg md:text-xl mb-6 line-clamp-3">${movie.plot || 'No description available.'}</p>
                                 <div class="flex space-x-4">
-                                    <button class="px-6 py-3 rounded-full font-semibold transition-colors flex items-center play-btn ${heroPlayButtonClasses}"
-                                        data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}" data-url="${movie.telegramPlayableUrl || ''}" ${heroPlayButtonDisabled ? 'disabled' : ''}>
-                                        <i class="fas fa-play mr-2"></i> ${heroPlayButtonText}
+                                    <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}">
+                                        <i class="fas fa-play mr-2"></i> Play
                                     </button>
-                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbId}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
+                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
                                         <i class="fas fa-plus mr-2"></i> My List
                                     </button>
                                 </div>
@@ -613,13 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Add event listeners for buttons within hero slides
                     heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
-                            const url = e.currentTarget.dataset.url;
-                            const title = e.currentTarget.dataset.title;
-                            if (url) {
-                                openVideoPlayer(url, title); // Use the new video player function
-                            } else {
-                                showMessageBox('No playable link available for this content.', 'info');
-                            }
+                            showMessageBox(`Playing ${e.currentTarget.dataset.title || 'content'} (feature coming soon!)`, 'info');
                         });
                     });
                     heroSlidesContainer.querySelectorAll('.add-to-list-btn').forEach(btn => {
@@ -635,7 +414,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     });
 
-
                     startHeroCarousel();
                 } else {
                     console.log("No valid trending movies with images found for hero section. Hiding hero.");
@@ -648,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No trending movies found from backend. Hiding hero.");
                 if (heroSection) { // Check if heroSection exists before manipulating
                     heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies found for hero section.</p>';
-                    heroSection.classList.add('hidden-hero'); // Hide if error
+                    heroSection.classList.add('hidden-hero'); // Hide if no data
                 }
             }
         } catch (error) {
@@ -775,232 +553,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
-    // --- Custom Video Player Controls Logic ---
-
-    let isDraggingProgressBar = false;
-
-    // Play/Pause Toggle
-    playPauseBtn.addEventListener('click', () => {
-        if (moviePlayer.paused || moviePlayer.ended) {
-            moviePlayer.play();
-        } else {
-            moviePlayer.pause();
-        }
-    });
-
-    // Rewind/Forward Buttons
-    rewindBtn.addEventListener('click', () => {
-        moviePlayer.currentTime = Math.max(0, moviePlayer.currentTime - 10); // Skip back 10 seconds
-    });
-
-    forwardBtn.addEventListener('click', () => {
-        moviePlayer.currentTime = Math.min(moviePlayer.duration, moviePlayer.currentTime + 10); // Skip forward 10 seconds
-    });
-
-
-    // Update Play/Pause Button Icon
-    moviePlayer.addEventListener('play', () => {
-        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
-    });
-    moviePlayer.addEventListener('pause', () => {
-        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-    });
-    moviePlayer.addEventListener('ended', () => {
-        playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
-    });
-
-    // Format time for display
-    const formatTime = (seconds) => {
-        const minutes = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
-    };
-
-    // Update Progress Bar and Time Display
-    moviePlayer.addEventListener('timeupdate', () => {
-        if (!isDraggingProgressBar && moviePlayer.duration) { // Only update if not dragging and duration is available
-            const progress = (moviePlayer.currentTime / moviePlayer.duration) * 100;
-            progressBarFill.style.width = `${progress}%`;
-            progressBarHandle.style.left = `${progress}%`;
-            currentTimeSpan.textContent = formatTime(moviePlayer.currentTime);
-        }
-    });
-
-    // Set Duration when metadata loads
-    moviePlayer.addEventListener('loadedmetadata', () => {
-        durationSpan.textContent = formatTime(moviePlayer.duration);
-        volumeSlider.value = moviePlayer.volume; // Initialize volume slider
-        populateAudioTracks(); // Populate audio tracks when metadata loads
-        populateTextTracks(); // Populate text tracks when metadata loads
-    });
-
-    // Progress Bar Seeking
-    progressBarContainer.addEventListener('mousedown', (e) => {
-        isDraggingProgressBar = true;
-        updateProgressBar(e);
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (isDraggingProgressBar) {
-            updateProgressBar(e);
-        }
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (isDraggingProgressBar) {
-            isDraggingProgressBar = false;
-        }
-    });
-
-    const updateProgressBar = (e) => {
-        const rect = progressBarContainer.getBoundingClientRect();
-        let x = e.clientX - rect.left; // x position within the element.
-        let width = rect.width;
-        let percent = Math.max(0, Math.min(1, x / width)); // Clamp between 0 and 1
-
-        moviePlayer.currentTime = percent * moviePlayer.duration;
-        progressBarFill.style.width = `${percent * 100}%`;
-        progressBarHandle.style.left = `${percent * 100}%`;
-        currentTimeSpan.textContent = formatTime(moviePlayer.currentTime);
-    };
-
-    // Volume Control
-    volumeBtn.addEventListener('click', () => {
-        moviePlayer.muted = !moviePlayer.muted;
-        volumeBtn.innerHTML = moviePlayer.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-        volumeSlider.value = moviePlayer.muted ? 0 : moviePlayer.volume;
-    });
-
-    volumeSlider.addEventListener('input', () => {
-        moviePlayer.volume = volumeSlider.value;
-        moviePlayer.muted = moviePlayer.volume === 0;
-        volumeBtn.innerHTML = moviePlayer.muted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
-    });
-
-    // Fullscreen Toggle
-    fullscreenBtn.addEventListener('click', () => {
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            moviePlayer.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-                showMessageBox('Fullscreen not supported or allowed by browser.', 'error');
-            });
-        }
-    });
-
-    // Update fullscreen icon
-    document.addEventListener('fullscreenchange', () => {
-        if (document.fullscreenElement) {
-            fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
-        } else {
-            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
-        }
-    });
-
-    // Show/Hide controls on mouse move (for desktop)
-    let controlsTimeout;
-    videoPlayerOverlay.addEventListener('mousemove', () => {
-        playerControls.classList.add('active');
-        clearTimeout(controlsTimeout);
-        controlsTimeout = setTimeout(() => {
-            if (!moviePlayer.paused && !isDraggingProgressBar) {
-                playerControls.classList.remove('active');
-            }
-        }, 3000); // Hide controls after 3 seconds of inactivity
-    });
-
-    // Keep controls visible if paused or dragging
-    moviePlayer.addEventListener('pause', () => playerControls.classList.add('active'));
-    moviePlayer.addEventListener('play', () => {
-        clearTimeout(controlsTimeout);
-        controlsTimeout = setTimeout(() => {
-            playerControls.classList.remove('active');
-        }, 3000);
-    });
-
-    // --- Audio Track Selection ---
-    const populateAudioTracks = () => {
-        audioTrackOptions.innerHTML = ''; // Clear previous options
-        if (moviePlayer.audioTracks && moviePlayer.audioTracks.length > 0) {
-            moviePlayer.audioTracks.forEach((track, index) => {
-                const option = document.createElement('div');
-                option.className = 'px-3 py-1 cursor-pointer hover:bg-gray-700 rounded-md';
-                option.textContent = track.label || `Track ${index + 1}`;
-                option.dataset.index = index;
-                if (track.enabled) {
-                    option.classList.add('bg-red-600', 'hover:bg-red-700'); // Highlight active track
-                }
-                option.addEventListener('click', () => {
-                    // Disable all tracks, then enable the selected one
-                    for (let i = 0; i < moviePlayer.audioTracks.length; i++) {
-                        moviePlayer.audioTracks[i].enabled = false;
-                    }
-                    track.enabled = true;
-                    populateAudioTracks(); // Re-populate to update active state
-                    showMessageBox(`Audio changed to: ${track.label || `Track ${index + 1}`}`, 'info');
-                });
-                audioTrackOptions.appendChild(option);
-            });
-        } else {
-            audioTrackOptions.innerHTML = '<div class="px-3 py-1 text-gray-400">No audio tracks found</div>';
-        }
-    };
-
-    // --- Subtitle (Text Track) Selection ---
-    const populateTextTracks = () => {
-        subtitleOptions.innerHTML = ''; // Clear previous options
-
-        // Add "Off" option for subtitles
-        const offOption = document.createElement('div');
-        offOption.className = 'px-3 py-1 cursor-pointer hover:bg-gray-700 rounded-md';
-        offOption.textContent = 'Off';
-        offOption.addEventListener('click', () => {
-            for (let i = 0; i < moviePlayer.textTracks.length; i++) {
-                moviePlayer.textTracks[i].mode = 'hidden';
-            }
-            populateTextTracks(); // Re-populate to update active state
-            showMessageBox('Subtitles turned off.', 'info');
-        });
-        // Check if all tracks are hidden to mark "Off" as active
-        const allTracksHidden = Array.from(moviePlayer.textTracks).every(track => track.mode === 'hidden');
-        if (allTracksHidden || moviePlayer.textTracks.length === 0) {
-             offOption.classList.add('bg-red-600', 'hover:bg-red-700');
-        }
-        subtitleOptions.appendChild(offOption);
-
-
-        if (moviePlayer.textTracks && moviePlayer.textTracks.length > 0) {
-            moviePlayer.textTracks.forEach((track, index) => {
-                // Only show subtitle/caption tracks, not descriptions etc.
-                if (track.kind === 'subtitles' || track.kind === 'captions') {
-                    const option = document.createElement('div');
-                    option.className = 'px-3 py-1 cursor-pointer hover:bg-gray-700 rounded-md';
-                    option.textContent = track.label || track.language || `Subtitle ${index + 1}`;
-                    option.dataset.index = index;
-                    if (track.mode === 'showing') {
-                        option.classList.add('bg-red-600', 'hover:bg-red-700'); // Highlight active track
-                    }
-                    option.addEventListener('click', () => {
-                        // Hide all tracks, then enable the selected one
-                        for (let i = 0; i < moviePlayer.textTracks.length; i++) {
-                            moviePlayer.textTracks[i].mode = 'hidden';
-                        }
-                        track.mode = 'showing'; // Show the selected subtitle
-                        populateTextTracks(); // Re-populate to update active state
-                        showMessageBox(`Subtitles changed to: ${track.label || track.language || `Subtitle ${index + 1}`}`, 'info');
-                    });
-                    subtitleOptions.appendChild(option);
-                }
-            });
-        }
-        // If only "Off" option is present (no actual tracks), show a message
-        if (subtitleOptions.children.length === 1 && subtitleOptions.children[0].textContent === 'Off') {
-            subtitleOptions.innerHTML = '<div class="px-3 py-1 text-gray-400">No subtitles found</div>';
-        }
-    };
-
-
     // --- Event Listeners ---
 
     // Header scroll effect
@@ -1037,82 +589,41 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentType = link.dataset.content;
             loadContent(contentType);
 
-            // Hide mobile search overlay if it was open when navigating
-            if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
-                mobileSearchOverlay.classList.remove('active');
-                mobileSearchInput.value = ''; // Clear input when hiding
-                document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
-                mobileSearchResultsContainer.innerHTML = ''; // Clear search results
+            // Hide search input if it was open when navigating
+            if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
+                searchInputWrapper.classList.add('hidden');
+                searchInput.value = ''; // Clear input when hiding
             }
         });
     });
 
-    // Search toggle button functionality
-    if (searchToggleBtn) {
+    // Search toggle and input functionality (unified for all screen sizes)
+    if (searchToggleBtn && searchInputWrapper && searchInput) {
         searchToggleBtn.addEventListener('click', () => {
-            // Check if it's a mobile view (using a breakpoint, e.g., 768px as defined in CSS)
-            if (window.innerWidth < 768) {
-                // Mobile search: activate full-screen overlay
-                mobileSearchOverlay.classList.toggle('active');
-                if (mobileSearchOverlay.classList.contains('active')) {
-                    mobileSearchInput.focus(); // Focus on input when shown
-                    document.body.classList.add('overflow-hidden'); // Prevent body scrolling
-                } else {
-                    mobileSearchInput.value = ''; // Clear input when hiding
-                    document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
-                    mobileSearchResultsContainer.innerHTML = ''; // Clear search results
-                }
+            console.log("Search toggle clicked.");
+            console.log("Initial searchInputWrapper classes:", searchInputWrapper.classList.value);
+            console.log("Current window width:", window.innerWidth);
+
+            searchInputWrapper.classList.toggle('hidden');
+            console.log("searchInputWrapper classes AFTER toggle:", searchInputWrapper.classList.value);
+
+
+            if (!searchInputWrapper.classList.contains('hidden')) {
+                console.log("Search input wrapper is now visible. Attempting to focus.");
+                searchInput.focus(); // Focus on input when shown
             } else {
-                // Desktop search: toggle in-header search input
-                desktopSearchInputWrapper.classList.toggle('hidden');
-                if (!desktopSearchInputWrapper.classList.contains('hidden')) {
-                    desktopSearchInput.focus(); // Focus on input when shown
-                } else {
-                    desktopSearchInput.value = ''; // Clear input when hiding
-                }
+                console.log("Search input wrapper is now hidden. Clearing input.");
+                searchInput.value = ''; // Clear input when hiding
+                // REMOVED: loadContent('home'); // This was causing the reload
             }
         });
-    }
 
-    // Event listener for desktop search input
-    if (desktopSearchInput) {
-        desktopSearchInput.addEventListener('keypress', async (e) => {
+        searchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
-                console.log("Desktop Search input: Enter pressed. Query:", desktopSearchInput.value.trim());
-                await handleSearch(desktopSearchInput.value.trim(), movieSectionsContainer); // Pass main container
-                desktopSearchInputWrapper.classList.add('hidden'); // Hide desktop search input after search
-            }
-        });
-    }
-
-    // Event listener for mobile search input
-    if (mobileSearchInput) {
-        mobileSearchInput.addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
-                console.log("Mobile Search input: Enter pressed. Query:", mobileSearchInput.value.trim());
-                // Display results within the mobile search overlay itself
-                await handleSearch(mobileSearchInput.value.trim(), mobileSearchResultsContainer);
-            }
-        });
-    }
-
-    // Event listener for mobile search close button
-    if (closeSearchBtn) {
-        closeSearchBtn.addEventListener('click', () => {
-            mobileSearchOverlay.classList.remove('active');
-            mobileSearchInput.value = ''; // Clear input
-            document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
-            mobileSearchResultsContainer.innerHTML = ''; // Clear search results
-        });
-    }
-
-    // Event listener for closing the video player overlay
-    if (closeVideoBtn) {
-        closeVideoBtn.addEventListener('click', closeVideoPlayer);
-        // Also close if clicking outside the video container
-        videoPlayerOverlay.addEventListener('click', (e) => {
-            if (e.target === videoPlayerOverlay) {
-                closeVideoPlayer();
+                console.log("Search input: Enter pressed. Query:", searchInput.value.trim());
+                await handleSearch(searchInput.value.trim());
+                // Hide search input after search
+                searchInputWrapper.classList.add('hidden');
             }
         });
     }
@@ -1121,12 +632,12 @@ document.addEventListener('DOMContentLoaded', () => {
     /**
      * Handles the search logic for both desktop and mobile search inputs.
      * @param {string} query - The search query.
-     * @param {HTMLElement} targetContainer - The container to display search results in.
      */
-    const handleSearch = async (query, targetContainer) => {
-        console.log("handleSearch called with query:", query, "targetContainer:", targetContainer.id);
+    const handleSearch = async (query) => {
+        console.log("handleSearch called with query:", query);
         if (query.length > 2) { // Require at least 3 characters for search
-            targetContainer.innerHTML = ''; // Clear existing content
+            showLoading(); // Show loading for search
+            movieSectionsContainer.innerHTML = ''; // Clear existing content
             heroSection.classList.add('hidden-hero'); // Hide hero during search
             clearInterval(heroInterval); // Stop hero carousel
 
@@ -1151,26 +662,21 @@ document.addEventListener('DOMContentLoaded', () => {
                             searchGrid.appendChild(createMovieCard(item));
                         }
                     });
-                    targetContainer.appendChild(searchSectionDiv); // Append the new search section
+                    movieSectionsContainer.appendChild(searchSectionDiv); // Append the new search section
                 } else {
                     const noResultsDiv = document.createElement('div');
                     noResultsDiv.className = 'movie-section p-4 md:p-8 text-center text-gray-400';
                     noResultsDiv.innerHTML = `<p>No results found for "${query}" with valid images.</p>`;
-                    targetContainer.appendChild(noResultsDiv);
+                    movieSectionsContainer.appendChild(noResultsDiv);
                 }
             } catch (error) {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'movie-section p-4 md:p-8 pt-20 text-center text-red-500';
                 errorDiv.innerHTML = `<p>Error performing search for "${query}". Please try again later.</p>`;
-                targetContainer.appendChild(errorDiv);
+                movieSectionsContainer.appendChild(errorDiv);
                 console.error('Search error:', error);
             } finally {
                 hideLoading(); // Ensure loading indicator is hidden after search
-                // For mobile, if search results are displayed in the overlay, keep overlay open.
-                // If search results are displayed in the main content area (desktop), close the desktop input.
-                if (targetContainer === movieSectionsContainer && window.innerWidth >= 768) {
-                    desktopSearchInputWrapper.classList.add('hidden');
-                }
             }
         } else {
             showMessageBox('Please enter at least 3 characters for search.', 'info');
@@ -1189,50 +695,46 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} contentType - The type of content to load.
      */
     const loadContent = async (contentType) => {
-        showLoading();
+        showLoading(); // Show loading immediately when any content load starts
         movieSectionsContainer.innerHTML = ''; // Clear previous content
 
-        // Hide mobile search overlay if it was open when changing content type
-        if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
-            mobileSearchOverlay.classList.remove('active');
-            mobileSearchInput.value = '';
-            document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
-            mobileSearchResultsContainer.innerHTML = ''; // Clear search results
+        // Hide search input wrapper when changing content type
+        if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
+            searchInputWrapper.classList.add('hidden');
+            searchInput.value = '';
         }
-        // Hide desktop search input if it was open
-        if (desktopSearchInputWrapper && !desktopSearchInputWrapper.classList.contains('hidden')) {
-            desktopSearchInputWrapper.classList.add('hidden');
-            desktopSearchInput.value = '';
-        }
-
 
         // Hide hero section for non-home pages
-        if (heroSection) { // Check if heroSection exists
+        if (heroSection) {
             if (contentType !== 'home') {
                 heroSection.classList.add('hidden-hero');
                 clearInterval(heroInterval); // Clear hero interval when hero section is hidden
                 console.log('Hero section is being hidden for non-home page.');
             } else {
                 heroSection.classList.remove('hidden-hero');
-                startHeroCarousel(); // Restart hero carousel if returning to home
+                // startHeroCarousel() will be called after fetchHeroMovies resolves
                 console.log('Hero section is being shown for home page.');
             }
         }
 
         try {
             if (contentType === 'home') {
-                await fetchHeroMovies(); // This will also start the carousel
-                await fetchAndDisplaySection('Most Popular Movies', `${API_BASE_URL}/movies/popular`);
-                await fetchAndDisplaySection('Best Series', `${API_BASE_URL}/series/best`); // Now fetches random sample
-                await fetchAndDisplaySection('Most Popular Series', `${API_BASE_URL}/series/popular`);
-                await fetchAndDisplaySection('Action Movies', `${API_BASE_URL}/movies/genre/action`);
-                await fetchAndDisplaySection('Comedy Films', `${API_BASE_URL}/movies/genre/comedy`);
-                await fetchAndDisplaySection('Drama Series', `${API_BASE_URL}/series/genre/drama`);
-                await fetchAndDisplaySection('Sci-Fi Movies', `${API_BASE_URL}/movies/genre/sci-fi`);
-                await fetchAndDisplaySection('Animation Series', `${API_BASE_URL}/series/genre/animation`);
-                await fetchAndDisplaySection('Horror Films', `${API_BASE_URL}/movies/genre/horror`);
-                await fetchAndDisplaySection('Fantasy Movies', `${API_BASE_URL}/movies/genre/fantasy`);
-                await fetchAndDisplaySection('Crime Series', `${API_BASE_URL}/series/genre/crime`);
+                // Collect all promises for home page sections
+                const homeSectionPromises = [
+                    fetchHeroMovies(), // This will also start the carousel
+                    fetchAndDisplaySection('Most Popular Movies', `${API_BASE_URL}/movies/popular`),
+                    fetchAndDisplaySection('Best Series', `${API_BASE_URL}/series/best`),
+                    fetchAndDisplaySection('Most Popular Series', `${API_BASE_URL}/series/popular`),
+                    fetchAndDisplaySection('Action Movies', `${API_BASE_URL}/movies/genre/action`),
+                    fetchAndDisplaySection('Comedy Films', `${API_BASE_URL}/movies/genre/comedy`),
+                    fetchAndDisplaySection('Drama Series', `${API_BASE_URL}/series/genre/drama`),
+                    fetchAndDisplaySection('Sci-Fi Movies', `${API_BASE_URL}/movies/genre/sci-fi`),
+                    fetchAndDisplaySection('Animation Series', `${API_BASE_URL}/series/genre/animation`),
+                    fetchAndDisplaySection('Horror Films', `${API_BASE_URL}/movies/genre/horror`),
+                    fetchAndDisplaySection('Fantasy Movies', `${API_BASE_URL}/movies/genre/fantasy`),
+                    fetchAndDisplaySection('Crime Series', `${API_BASE_URL}/series/genre/crime`)
+                ];
+                await Promise.allSettled(homeSectionPromises); // Use allSettled to wait for all, even if some fail
             } else if (contentType === 'movies') {
                 await fetchAndDisplaySection('All Movies', `${API_BASE_URL}/movies`, true); // True for grid layout
             } else if (contentType === 'series') {
@@ -1245,19 +747,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     mylistSection.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">My List</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
                     const mylistGrid = mylistSection.querySelector('.movie-grid-category');
 
-                    // Filter My List items to only show those with valid images
                     const filteredMyListItems = userList.items.filter(item => isValidPosterUrl(item.poster));
 
                     if (filteredMyListItems.length > 0) {
                         filteredMyListItems.forEach(item => {
                             const card = createMovieCard(item);
-                            // Add a remove button to my list items
                             const removeBtn = document.createElement('button');
                             removeBtn.className = 'absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300';
                             removeBtn.innerHTML = `<i class="fas fa-times"></i>`;
                             removeBtn.title = `Remove ${item.title} from My List`;
                             removeBtn.addEventListener('click', (e) => {
-                                e.stopPropagation(); // Prevent card click from opening detail overlay
+                                e.stopPropagation();
                                 removeFromMyList(item.imdbID);
                             });
                             card.appendChild(removeBtn);
@@ -1284,7 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
             errorDiv.innerHTML = `<p>Error loading ${contentType} content. Please try again later.</p>`;
             movieSectionsContainer.appendChild(errorDiv);
         } finally {
-            hideLoading();
+            hideLoading(); // Hide loading only after all content promises are settled
         }
     };
 
