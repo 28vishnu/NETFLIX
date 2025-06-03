@@ -227,21 +227,27 @@ body {
 
 /* Close button for detail overlay - Positioning adjusted for mobile */
 .detail-overlay-content .close-overlay-btn {
-    background: none;
+    background: #e50914; /* Netflix red */
     border: none;
     color: white;
     font-size: 2rem;
     cursor: pointer;
     position: absolute;
-    top: 0.5rem; /* Adjusted for better spacing */
-    right: 0.5rem; /* Adjusted for better spacing */
+    top: 0.75rem; /* Adjusted for better spacing */
+    right: 0.75rem; /* Adjusted for better spacing */
     z-index: 10;
-    transition: color 0.2s ease;
+    transition: background-color 0.2s ease;
     padding: 0.5rem; /* Added padding for easier tap target */
+    border-radius: 50%; /* Make it circular */
+    width: 3rem; /* Fixed width */
+    height: 3rem; /* Fixed height */
+    display: flex; /* Center the X */
+    align-items: center;
+    justify-content: center;
 }
 
 .detail-overlay-content .close-overlay-btn:hover {
-    color: #ccc;
+    background-color: #c11119; /* Slightly darker red on hover */
 }
 
 /* Loading Indicator Styling */
@@ -657,20 +663,31 @@ body {
     }
 
     .detail-overlay-content .flex.space-x-4.mb-6 { /* Play & Add to List buttons */
-        flex-direction: row; /* Changed to row for side-by-side */
-        justify-content: center; /* Center buttons horizontally */
-        flex-wrap: wrap; /* Allow buttons to wrap if screen is too small */
-        gap: 0.75rem; /* Space between buttons */
+        flex-direction: column; /* Stack buttons vertically */
+        align-items: stretch; /* Stretch buttons to full width */
+        gap: 0.75rem; /* Space between stacked buttons */
     }
 
     .detail-overlay-content .flex.space-x-4.mb-6 button {
-        flex-grow: 1; /* Allow buttons to grow and fill space */
-        min-width: 120px; /* Minimum width for buttons to prevent them from becoming too small */
-        max-width: 48%; /* Max width to allow two buttons side-by-side with gap */
-        justify-content: center; /* Center text/icon within button */
-        padding: 0.75rem 1rem; /* Adjust padding for better look */
-        font-size: 0.9rem; /* Adjust font size */
+        width: 100%; /* Full width buttons */
+        justify-content: center; /* Center text/icon */
+        padding: 0.75rem 1.5rem; /* Adjust padding for better look */
+        font-size: 1rem; /* Adjust font size */
+        border-radius: 0.25rem; /* Slightly less rounded */
     }
+
+    /* Specific button styling for Netflix look */
+    .detail-overlay-content .play-btn {
+        background-color: white;
+        color: black;
+        font-weight: 600; /* Make play button text bold */
+    }
+
+    .detail-overlay-content .add-to-list-btn {
+        background-color: rgba(109, 109, 110, 0.7); /* Netflix grey */
+        color: white;
+    }
+
 
     /* Adjust font sizes for better mobile readability */
     .detail-overlay-content h2 {
@@ -681,7 +698,15 @@ body {
     }
     .detail-overlay-content .grid {
         font-size: 0.85rem; /* Smaller grid details */
+        /* Adjusting grid for metadata to be more linear */
+        grid-template-columns: 1fr; /* Single column for grid items */
+        gap: 0.25rem; /* Smaller gap between metadata lines */
     }
+    /* Ensure metadata items flow linearly */
+    .detail-overlay-content .grid p {
+        display: block; /* Ensure each p takes full width */
+    }
+
 
     /* Video Player Overlay adjustments for mobile */
     #video-player-overlay .video-container {
