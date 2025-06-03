@@ -22,10 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Select all nav links (both desktop and new mobile bottom nav)
     const navLinks = document.querySelectorAll('.nav-link');
 
-    // Desktop Search Elements
-    const desktopSearchToggleBtn = document.getElementById('search-toggle-btn');
-    const desktopSearchInputWrapper = document.getElementById('search-input-wrapper');
-    const desktopSearchInput = document.getElementById('search-input');
+    // Search Elements (now unified for desktop and mobile)
+    const searchToggleBtn = document.getElementById('search-toggle-btn'); // Renamed from desktopSearchToggleBtn
+    const searchInputWrapper = document.getElementById('search-input-wrapper'); // Renamed from desktopSearchInputWrapper
+    const searchInput = document.getElementById('search-input'); // Renamed from desktopSearchInput
 
     // Hero Section Elements
     const heroSection = document.getElementById('hero-section');
@@ -37,11 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailOverlayContainer = document.getElementById('detail-overlay-container');
     // messageBox is dynamically created/appended, so no need to get it here initially
 
-    // NEW: Mobile Bottom Navigation Search Elements
-    const mobileBottomNav = document.getElementById('mobile-bottom-nav'); // Reference to the bottom nav itself
-    const mobileSearchToggleBtn = document.getElementById('mobile-search-toggle-btn'); // The search icon in the bottom nav
-    const mobileSearchInputWrapper = document.getElementById('mobile-search-input-wrapper'); // The input wrapper for mobile search
-    const mobileSearchInput = document.getElementById('mobile-search-input'); // The actual search input for mobile
+    // REMOVED: Mobile Bottom Navigation Search Elements (no longer needed)
+    // const mobileBottomNav = document.getElementById('mobile-bottom-nav');
+    // const mobileSearchToggleBtn = document.getElementById('mobile-search-toggle-btn');
+    // const mobileSearchInputWrapper = document.getElementById('mobile-search-input-wrapper');
+    // const mobileSearchInput = document.getElementById('mobile-search-input');
 
     // --- Global Variables ---
     let currentHeroSlide = 0;
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 itemsToDisplay = data;
             }
 
-            // NEW: Filter out items with invalid poster URLs before rendering
+            // Filter out items with invalid poster URLs before rendering
             const filteredItems = itemsToDisplay.filter(item => isValidPosterUrl(item.poster));
 
             if (filteredItems && filteredItems.length > 0) {
@@ -283,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>Language:</strong> ${data.language || 'N/A'}</p>
                                 <p><strong>Country:</strong> ${data.country || 'N/A'}</p>
                                 <p><strong>Awards:</b> ${data.awards || 'N/A'}</p>
-                                <p><strong>IMDb Rating:</strong> ${data.imdbRating || 'N/A'}</p>
+                                <p><strong>IMDb Rating:</b> ${data.imdbRating || 'N/A'}</p>
                                 <p><strong>IMDb ID:</strong> ${data.imdbID || 'N/A'}</p>
                                 ${type === 'series' && data.totalSeasons ? `<p><strong>Total Seasons:</strong> ${data.totalSeasons}</p>` : ''}
                             </div>
@@ -364,7 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await fetchData(`${API_BASE_URL}/movies/trending`);
 
             if (data && data.length > 0) {
-                // NEW: Filter out hero movies with invalid poster URLs
+                // Filter out hero movies with invalid poster URLs
                 const heroMovies = data.filter(item => isValidPosterUrl(item.poster)).slice(0, 5); // Take top 5 valid ones
 
                 if (heroMovies.length > 0) {
@@ -574,9 +574,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 header.classList.remove('scrolled');
             }
 
-            // Hide/show header on scroll down/up
-            // Only hide header on scroll down if not on mobile (mobile has bottom nav)
-            if (window.innerWidth >= 768) { // Only for desktop/tablet
+            // Hide/show header on scroll down/up (only for desktop, mobile header is always visible)
+            if (window.innerWidth >= 768) {
                 if (window.scrollY > lastScrollY && window.scrollY > 200) { // Scroll down
                     header.classList.add('hide-header');
                 } else { // Scroll up
@@ -600,66 +599,33 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentType = link.dataset.content;
             loadContent(contentType);
 
-            // Hide mobile search input if it was open
-            if (mobileSearchInputWrapper && !mobileSearchInputWrapper.classList.contains('hidden')) {
-                mobileSearchInputWrapper.classList.add('hidden');
-                mobileSearchInput.value = ''; // Clear input when hiding
+            // Hide search input if it was open when navigating
+            if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
+                searchInputWrapper.classList.add('hidden');
+                searchInput.value = ''; // Clear input when hiding
             }
         });
     });
 
-    // Desktop Search toggle and input functionality
-    if (desktopSearchToggleBtn && desktopSearchInputWrapper && desktopSearchInput) {
-        desktopSearchToggleBtn.addEventListener('click', () => {
-            console.log("Desktop search toggle clicked.");
-            desktopSearchInputWrapper.classList.toggle('hidden');
-            if (!desktopSearchInputWrapper.classList.contains('hidden')) {
-                desktopSearchInput.focus(); // Focus on input when shown
+    // Search toggle and input functionality (unified for all screen sizes)
+    if (searchToggleBtn && searchInputWrapper && searchInput) {
+        searchToggleBtn.addEventListener('click', () => {
+            console.log("Search toggle clicked.");
+            searchInputWrapper.classList.toggle('hidden');
+            if (!searchInputWrapper.classList.contains('hidden')) {
+                searchInput.focus(); // Focus on input when shown
             } else {
-                desktopSearchInput.value = ''; // Clear input when hiding
+                searchInput.value = ''; // Clear input when hiding
                 loadContent('home'); // Reload home content if search is cleared/hidden
             }
         });
 
-        desktopSearchInput.addEventListener('keypress', async (e) => {
+        searchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
-                console.log("Desktop search input: Enter pressed. Query:", desktopSearchInput.value.trim());
-                await handleSearch(desktopSearchInput.value.trim());
-                // Optionally hide search input after search on desktop
-                if (window.innerWidth >= 768) {
-                    desktopSearchInputWrapper.classList.add('hidden');
-                }
-            }
-        });
-    }
-
-    // NEW: Mobile Search Toggle and Input functionality
-    if (mobileSearchToggleBtn && mobileSearchInputWrapper && mobileSearchInput) {
-        mobileSearchToggleBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevent default link behavior for the search icon
-            console.log("Mobile search toggle clicked.");
-            mobileSearchInputWrapper.classList.toggle('hidden');
-            if (!mobileSearchInputWrapper.classList.contains('hidden')) {
-                mobileSearchInput.focus(); // Focus on input when shown
-            } else {
-                mobileSearchInput.value = ''; // Clear input when hiding
-                loadContent('home'); // Reload home content if search is cleared/hidden
-            }
-
-            // Remove 'active' from other nav links in bottom bar, search becomes active
-            // This ensures only the clicked item (search in this case) is active
-            mobileBottomNav.querySelectorAll('.nav-link').forEach(nav => nav.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-        });
-
-        mobileSearchInput.addEventListener('keypress', async (e) => {
-            if (e.key === 'Enter') {
-                console.log("Mobile search input: Enter pressed. Query:", mobileSearchInput.value.trim());
-                await handleSearch(mobileSearchInput.value.trim());
-                // Hide search input after search on mobile
-                if (window.innerWidth < 768) {
-                    mobileSearchInputWrapper.classList.add('hidden');
-                }
+                console.log("Search input: Enter pressed. Query:", searchInput.value.trim());
+                await handleSearch(searchInput.value.trim());
+                // Hide search input after search
+                searchInputWrapper.classList.add('hidden');
             }
         });
     }
@@ -682,7 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
                 console.log("Search results received:", allResults);
 
-                // NEW: Filter search results to only show items with valid images
+                // Filter search results to only show items with valid images
                 const filteredResults = allResults.filter(item => isValidPosterUrl(item.poster));
 
                 if (filteredResults.length > 0) {
@@ -733,15 +699,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showLoading();
         movieSectionsContainer.innerHTML = ''; // Clear previous content
 
-        // Hide desktop search input wrapper when changing content type
-        if (desktopSearchInputWrapper && !desktopSearchInputWrapper.classList.contains('hidden')) {
-            desktopSearchInputWrapper.classList.add('hidden');
-            desktopSearchInput.value = '';
-        }
-        // Hide mobile search input wrapper when changing content type
-        if (mobileSearchInputWrapper && !mobileSearchInputWrapper.classList.contains('hidden')) {
-            mobileSearchInputWrapper.classList.add('hidden');
-            mobileSearchInput.value = '';
+        // Hide search input wrapper when changing content type
+        if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
+            searchInputWrapper.classList.add('hidden');
+            searchInput.value = '';
         }
 
         // Hide hero section for non-home pages
@@ -761,7 +722,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (contentType === 'home') {
                 await fetchHeroMovies(); // This will also start the carousel
                 await fetchAndDisplaySection('Most Popular Movies', `${API_BASE_URL}/movies/popular`);
-                await fetchAndDisplaySection('Best Series', `${API_BASE_URL}/series/best`); // NEW: Best Series section
+                await fetchAndDisplaySection('Best Series', `${API_BASE_URL}/series/best`); // Now fetches random sample
                 await fetchAndDisplaySection('Most Popular Series', `${API_BASE_URL}/series/popular`);
                 await fetchAndDisplaySection('Action Movies', `${API_BASE_URL}/movies/genre/action`);
                 await fetchAndDisplaySection('Comedy Films', `${API_BASE_URL}/movies/genre/comedy`);
@@ -783,7 +744,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     mylistSection.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">My List</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
                     const mylistGrid = mylistSection.querySelector('.movie-grid-category');
 
-                    // NEW: Filter My List items to only show those with valid images
+                    // Filter My List items to only show those with valid images
                     const filteredMyListItems = userList.items.filter(item => isValidPosterUrl(item.poster));
 
                     if (filteredMyListItems.length > 0) {
@@ -799,7 +760,6 @@ document.addEventListener('DOMContentLoaded', () => {
                                 removeFromMyList(item.imdbID);
                             });
                             card.appendChild(removeBtn);
-                            mylistGrid.appendChild(card);
                         });
                         movieSectionsContainer.appendChild(mylistSection);
                     } else {

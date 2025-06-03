@@ -119,21 +119,11 @@ app.get('/api/series/popular', async (req, res) => {
     }
 });
 
-// NEW: Route to get specific "Best Series" titles - placed before :imdbID
+// UPDATED: Route to get "Best Series" (now a random sample) - placed before :imdbID
 app.get('/api/series/best', async (req, res) => {
     try {
-        const bestSeriesTitles = [
-            'Breaking Bad', 'Stranger Things', 'House of the Dragon',
-            'Game of Thrones', 'Prison Break', 'Chernobyl', 'The Wire',
-            'Band of Brothers', 'The Queen\'s Gambit', 'The Mandalorian',
-            'Dark', 'Squid Game', 'Arcane', 'Severance', 'The Boys',
-            'Ted Lasso', 'Succession', 'Fleabag', 'Mr. Robot', 'Peaky Blinders',
-            'Mindhunter', 'The Crown', 'Fallout', 'Shōgun', 'The Bear'
-        ];
-        // Use $in operator to find series by title, case-insensitive
-        const bestSeries = await Series.find({
-            Title: { $in: bestSeriesTitles.map(title => new RegExp(title, 'i')) }
-        });
+        // Fetch a random sample of series from the database
+        const bestSeries = await Series.aggregate([{ $sample: { size: 10 } }]); // Get 10 random series
         res.json(bestSeries);
     } catch (error) {
         console.error('Error fetching best series:', error);
@@ -282,18 +272,18 @@ app.get('/api/search', async (req, res) => {
         // Search across multiple fields using $or
         const movies = await Movie.find({
             $or: [
-                { Title: searchTerm },
-                { Plot: searchTerm },
-                { Actors: searchTerm },
-                { Genre: searchTerm } // Will search within genre array/string
+                { title: searchTerm }, // Changed to 'title' to match schema
+                { plot: searchTerm },   // Changed to 'plot' to match schema
+                { actors: searchTerm }, // Changed to 'actors' to match schema
+                { genre: searchTerm }   // Changed to 'genre' to match schema
             ]
         });
         const series = await Series.find({
             $or: [
-                { Title: searchTerm },
-                { Plot: searchTerm },
-                { Actors: searchTerm },
-                { Genre: searchTerm } // Will search within genre array/string
+                { title: searchTerm }, // Changed to 'title' to match schema
+                { plot: searchTerm },   // Changed to 'plot' to match schema
+                { actors: searchTerm }, // Changed to 'actors' to match schema
+                { genre: searchTerm }   // Changed to 'genre' to match schema
             ]
         });
         res.json({ movies, series }); // Return an object with movies and series arrays
