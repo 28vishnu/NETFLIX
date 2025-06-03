@@ -1,0 +1,820 @@
+/* Base styles for the body, ensuring consistent font and background */
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #141414; /* Deep dark background, similar to Netflix */
+    color: #e5e5e5; /* Light grey text for contrast */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    /* Prevent horizontal scroll on body from content overflow */
+    overflow-x: hidden;
+}
+
+/* Ensure all elements inherit box-sizing */
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+/* --- Global Scrollbar Hiding --- */
+/* Custom scrollbar hiding for a cleaner look, common in streaming UIs */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Hides scrollbar for Webkit browsers (Chrome, Safari) */
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* Hides scrollbar for IE and Edge */
+    scrollbar-width: none;  /* Hides scrollbar for Firefox */
+}
+
+/* --- Header Styling --- */
+#main-header {
+    background-color: rgba(20, 20, 20, 0.9); /* Slightly more opaque background */
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    height: 60px; /* Standard header height */
+    align-items: center;
+}
+
+/* Header transition and sticky effect */
+#main-header {
+    transition: background-color 0.3s ease-in-out, transform 0.3s ease-in-out;
+    background-color: transparent; /* Default transparent */
+}
+#main-header.scrolled {
+    background-color: #141414; /* Solid background when scrolled */
+}
+#main-header.hide-header {
+    transform: translateY(-100%); /* Hides header on scroll down */
+}
+
+
+/* Hero section specific styles for full-bleed background and overlay */
+#hero-section {
+    height: 85vh; /* Adjust height as needed */
+    min-height: 500px;
+    position: relative;
+    overflow: hidden;
+    margin-top: -64px; /* Adjust for header height to make it full-bleed */
+    padding-top: 64px; /* Push content down to compensate for negative margin */
+    display: flex; /* Ensure flex for centering/positioning slides */
+    align-items: center; /* Vertically center content if needed */
+    justify-content: center; /* Horizontally center content if needed */
+    transition: opacity 0.5s ease-in-out, height 0.5s ease-in-out, min-height 0.5s ease-in-out, padding-top 0.5s ease-in-out, margin-top 0.5s ease-in-out; /* Smooth hide/show */
+}
+#hero-section.hidden-hero {
+    opacity: 0;
+    height: 0;
+    min-height: 0;
+    padding-top: 0;
+    margin-top: 0;
+    pointer-events: none; /* Disable interactions when hidden */
+}
+
+.hero-slides-container {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.8s cubic-bezier(0.25, 0.1, 0.25, 1); /* Smooth cubic-bezier transition */
+}
+
+.hero-slide {
+    flex-shrink: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    display: flex;
+    align-items: flex-end; /* Align text content to the bottom */
+}
+
+/* Dark overlay for hero section to make text readable */
+.hero-slide .absolute.inset-0 {
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+}
+
+.hero-text-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    padding: 2rem;
+    color: white;
+    z-index: 10;
+    width: 100%;
+    max-width: 800px; /* Limit text width */
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7); /* Subtle text shadow for readability */
+}
+
+.hero-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 1rem;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 20;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s, opacity 0.3s;
+    opacity: 0.7; /* Slightly transparent by default */
+}
+
+.hero-nav-btn:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+    opacity: 1;
+}
+
+#hero-prev-btn { left: 1rem; }
+#hero-next-btn { right: 1rem; }
+
+.hero-dots-container {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.5rem;
+    z-index: 20;
+}
+
+.hero-dots-container div { /* Changed from span to div for consistency with script.js */
+    height: 0.5rem;
+    width: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.hero-dots-container div.bg-white { /* Changed from span to div */
+    background-color: white;
+}
+
+/* Movie card specific styling for hover effects */
+.movie-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for scale and shadow */
+    box-shadow: 0 0 0 rgba(0,0,0,0); /* Initial no shadow */
+}
+.movie-card:hover {
+    transform: scale(1.08); /* Slightly more pronounced scale */
+    box-shadow: 0 8px 16px rgba(0,0,0,0.5); /* Add a subtle shadow on hover */
+    z-index: 20; /* Ensure hovered card is on top */
+}
+
+/* Info overlay on movie card hover */
+.movie-card-info {
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    padding: 0.75rem; /* Slightly more padding */
+}
+.movie-card:hover .movie-card-info {
+    opacity: 1;
+}
+
+/* Detail Overlay */
+.detail-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95); /* Slightly darker overlay */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 0; /* Start hidden */
+    transition: opacity 0.3s ease; /* Fade in/out */
+    pointer-events: none; /* Disable clicks when not active */
+}
+.detail-overlay.active {
+    opacity: 1; /* Show when active */
+    pointer-events: auto; /* Enable clicks when active */
+}
+
+.detail-overlay-content {
+    background-color: #1a1a1a; /* Darker panel background */
+    border-radius: 0.5rem; /* Rounded corners */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.7); /* Stronger shadow */
+    transform: translateY(20px); /* Slight animation on open */
+    transition: transform 0.3s ease;
+    max-width: 90%; /* Max width for responsiveness */
+    max-height: 90vh; /* Max height for responsiveness */
+    overflow: hidden; /* Hide scrollbars if content overflows */
+}
+.detail-overlay.active .detail-overlay-content {
+    transform: translateY(0);
+}
+
+/* Custom scrollbar for detail overlay */
+.detail-overlay-content::-webkit-scrollbar {
+    width: 8px;
+}
+.detail-overlay-content::-webkit-scrollbar-track {
+    background: #2a2a2a;
+    border-radius: 10px;
+}
+.detail-overlay-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+.detail-overlay-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Close button for detail overlay - Positioning adjusted for mobile */
+.detail-overlay-content .close-overlay-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    position: absolute;
+    top: 0.5rem; /* Adjusted for better spacing */
+    right: 0.5rem; /* Adjusted for better spacing */
+    z-index: 10;
+    transition: color 0.2s ease;
+    padding: 0.5rem; /* Added padding for easier tap target */
+}
+
+.detail-overlay-content .close-overlay-btn:hover {
+    color: #ccc;
+}
+
+/* Loading Indicator Styling */
+#loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent dark overlay */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999; /* Ensure it's on top */
+    color: #e5e5e5;
+    font-size: 1.2rem;
+    transition: opacity 0.3s ease;
+}
+#loading-indicator.hidden {
+    opacity: 0;
+    pointer-events: none; /* Allow clicks through when hidden */
+}
+#loading-indicator .fa-spinner {
+    color: #e50914; /* Netflix red */
+}
+
+/* Message Box Styling */
+#message-box {
+    transition: opacity 0.3s ease;
+}
+#message-box.show {
+    opacity: 1;
+}
+
+/* Mobile Bottom Nav Styling */
+#mobile-bottom-nav {
+    display: none; /* Hidden by default, shown via media query */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #1a1a1a; /* Darker background than body */
+    border-top: 1px solid #333;
+    padding: 10px 0;
+    height: 60px; /* Fixed height for the bottom nav */
+    z-index: 99;
+    justify-content: space-around;
+    align-items: center;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
+}
+
+#mobile-bottom-nav ul {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+}
+
+#mobile-bottom-nav li {
+    list-style: none;
+}
+
+#mobile-bottom-nav .nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #e5e5e5;
+    text-decoration: none;
+    font-size: 0.7rem; /* Smaller text for mobile */
+    font-weight: 500;
+    padding: 5px;
+    transition: color 0.2s ease;
+}
+
+#mobile-bottom-nav .nav-link i {
+    font-size: 1.2rem; /* Icon size */
+    margin-bottom: 4px;
+}
+
+#mobile-bottom-nav .nav-link:hover,
+#mobile-bottom-nav .nav-link.active {
+    color: #ffffff; /* Brighter on hover/active */
+}
+
+/* Mobile Search Overlay (Full Screen) */
+#mobile-search-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95); /* Darker, semi-transparent background */
+    z-index: 1000; /* Above everything else */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start; /* Align to top for input */
+    padding-top: 2rem; /* Space from top */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+#mobile-search-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+#mobile-search-overlay .search-header {
+    width: 90%;
+    max-width: 600px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+#mobile-search-overlay #mobile-search-input { /* Specific ID for mobile search input */
+    flex-grow: 1;
+    background-color: #333;
+    border: 1px solid #555;
+    color: white;
+    padding: 0.75rem 1rem; /* Larger padding */
+    border-radius: 0.5rem;
+    font-size: 1.2rem; /* Larger text */
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+#mobile-search-overlay #mobile-search-input:focus {
+    border-color: #e50914; /* Netflix red on focus */
+}
+
+#mobile-search-overlay .close-search-btn {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    margin-left: 1rem;
+    transition: color 0.3s;
+}
+
+#mobile-search-overlay .close-search-btn:hover {
+    color: #e50914;
+}
+
+#mobile-search-overlay .search-results-container {
+    width: 90%;
+    max-width: 600px;
+    overflow-y: auto;
+    flex-grow: 1; /* Take up remaining space */
+    padding-bottom: 1rem;
+}
+
+
+/* --- Video Player Overlay Styles --- */
+#video-player-overlay {
+    transition: opacity 0.3s ease;
+    display: none; /* Hidden by default, shown by JS */
+}
+
+#video-player-overlay.active {
+    opacity: 1;
+    display: flex; /* Display flex when active */
+}
+
+#video-player-overlay .video-container {
+    position: relative;
+    width: 90%; /* Max width for responsiveness */
+    max-width: 1200px; /* Max width for larger screens */
+    aspect-ratio: 16 / 9; /* Standard video aspect ratio */
+    background-color: #000;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#video-player-overlay #movie-player {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Ensure video fits within container without cropping */
+}
+
+#video-player-overlay .close-video-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    font-size: 2rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color 0.3s;
+}
+
+#video-player-overlay .close-video-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.player-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, transparent 100%);
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none; /* Disable interaction when hidden */
+}
+
+.player-controls.active {
+    opacity: 1;
+    pointer-events: auto; /* Enable interaction when active */
+}
+
+.player-controls button {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.2s;
+}
+
+.player-controls button:hover {
+    color: #ccc;
+}
+
+.progress-bar-container {
+    height: 0.4rem; /* Slightly thinner progress bar */
+    background-color: rgba(255, 255, 255, 0.3); /* Lighter background */
+    border-radius: 9999px; /* Fully rounded */
+    cursor: pointer;
+    position: relative;
+    margin-bottom: 0.75rem; /* Space below progress bar */
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background-color: #e50914; /* Netflix red */
+    border-radius: 9999px;
+    transition: width 0.1s linear; /* Smooth progress update */
+}
+
+.progress-bar-handle {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 1rem; /* Larger handle */
+    height: 1rem;
+    background-color: #e50914;
+    border-radius: 50%;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 0.2s ease;
+}
+
+.progress-bar-container:hover .progress-bar-handle {
+    opacity: 1; /* Show handle on hover */
+}
+
+.controls-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.volume-slider {
+    width: 80px; /* Adjust width for volume slider */
+    -webkit-appearance: none;
+    background: transparent;
+}
+.volume-slider::-webkit-slider-runnable-track {
+    height: 0.3rem;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 9999px;
+}
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 1rem;
+    width: 1rem;
+    background: white;
+    border-radius: 50%;
+    margin-top: -0.35rem; /* Adjust thumb vertical position */
+}
+
+/* Dropdown menus for audio/subtitles */
+.player-controls .relative.group button {
+    padding: 0.5rem; /* Ensure consistent padding for dropdown buttons */
+}
+
+#audio-track-options,
+#subtitle-options {
+    background-color: rgba(0, 0, 0, 0.8); /* Darker background for dropdown */
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    min-width: 120px; /* Ensure minimum width */
+    max-height: 150px; /* Max height for scroll if many options */
+    overflow-y: auto;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    z-index: 20; /* Ensure dropdown is above other controls */
+}
+
+#audio-track-options div,
+#subtitle-options div {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 0.25rem;
+}
+
+#audio-track-options div.bg-red-600,
+#subtitle-options div.bg-red-600 {
+    background-color: #e50914; /* Netflix red for active item */
+}
+
+
+/* Media Queries */
+/* Mobile specific styles (max-width: 767px) */
+@media (max-width: 767px) {
+    /* Adjust body padding to account for fixed bottom nav */
+    body {
+        padding-bottom: 70px; /* Height of the bottom nav + some margin */
+    }
+
+    /* Ensure top header and search are visible on mobile */
+    #main-header {
+        padding: 1rem; /* Adjust padding for mobile header */
+        background-color: #141414; /* Always solid background on mobile */
+    }
+    #main-header nav { /* Desktop nav */
+        display: none; /* Keep desktop nav hidden on mobile */
+    }
+    /* Search toggle button is always visible */
+    #main-header #search-toggle-btn {
+        display: block;
+    }
+    /* Hide the in-header search input wrapper on mobile */
+    #main-header #search-input-wrapper {
+        display: none;
+    }
+
+    /* Show mobile bottom navigation */
+    #mobile-bottom-nav {
+        display: flex !important; /* CRITICAL: Ensure it's always flex on mobile */
+    }
+
+    /* --- Mobile Detail Overlay Specific Styles --- */
+    .detail-overlay-content {
+        flex-direction: column; /* Stack image and details vertically */
+        max-width: 95%; /* Slightly wider on mobile */
+        max-height: 95vh; /* Allow more height on small screens */
+        overflow-y: auto; /* Ensure content is scrollable */
+        border-radius: 0.75rem; /* More rounded corners for mobile */
+    }
+
+    .detail-overlay-content > div:first-child { /* Target the image container */
+        width: 100%; /* Image takes full width */
+        height: 30vh; /* Control image height to not dominate screen */
+        position: relative; /* For gradient overlay */
+        overflow: hidden; /* Hide overflow for image */
+        border-radius: 0.75rem 0.75rem 0 0; /* Rounded top corners */
+    }
+
+    .detail-overlay-content > div:first-child img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Ensure image covers the area */
+        border-radius: 0.75rem 0.75rem 0 0; /* Rounded top corners */
+    }
+
+    /* Add a gradient overlay to the image on mobile for better text blending */
+    .detail-overlay-content > div:first-child::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 50%; /* Gradient covers bottom half of image */
+        background: linear-gradient(to top, #1a1a1a 0%, rgba(26, 26, 26, 0) 100%);
+        pointer-events: none; /* Allow clicks to pass through */
+    }
+
+
+    .detail-overlay-content > div:last-child { /* Target the text details container */
+        width: 100%; /* Details take full width */
+        padding: 1.5rem; /* Adjusted padding for mobile */
+        padding-top: 0; /* No top padding, as image has gradient */
+        overflow-y: visible; /* Let its own content scroll if necessary */
+        max-height: none; /* Remove max-height from parent to allow scrolling within this div */
+    }
+
+    .detail-overlay-content .close-overlay-btn {
+        top: 0.75rem; /* Slightly more space from top */
+        right: 0.75rem; /* Slightly more space from right */
+        font-size: 2.5rem; /* Larger for easier tap */
+        background: rgba(0, 0, 0, 0.7); /* More visible background */
+        border-radius: 50%;
+        width: 3rem;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .detail-overlay-content .flex.space-x-4.mb-6 { /* Play & Add to List buttons */
+        flex-direction: column; /* Stack buttons vertically */
+        align-items: stretch; /* Stretch buttons to full width */
+        gap: 0.75rem; /* Space between stacked buttons */
+    }
+
+    .detail-overlay-content .flex.space-x-4.mb-6 button {
+        width: 100%; /* Full width buttons */
+        justify-content: center; /* Center text/icon */
+    }
+
+    /* Adjust font sizes for better mobile readability */
+    .detail-overlay-content h2 {
+        font-size: 2.2rem; /* Slightly smaller main title */
+    }
+    .detail-overlay-content p {
+        font-size: 0.9rem; /* Smaller paragraph text */
+    }
+    .detail-overlay-content .grid {
+        font-size: 0.85rem; /* Smaller grid details */
+    }
+
+    /* Video Player Overlay adjustments for mobile */
+    #video-player-overlay .video-container {
+        width: 95%; /* Slightly wider on mobile */
+        height: auto; /* Auto height to maintain aspect ratio */
+        max-height: 80vh; /* Prevent it from taking full screen height */
+    }
+    #video-player-overlay .close-video-btn {
+        font-size: 2rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+    .player-controls {
+        padding: 0.75rem; /* Smaller padding for controls */
+    }
+    .controls-bottom-row {
+        flex-direction: column; /* Stack controls vertically on mobile */
+        align-items: flex-start; /* Align to left */
+        gap: 0.5rem;
+    }
+    .controls-bottom-row > div {
+        width: 100%; /* Make control groups take full width */
+        justify-content: space-between; /* Distribute items */
+    }
+    .controls-bottom-row .flex.items-center.gap-2 { /* Right side controls */
+        justify-content: flex-end; /* Align to right */
+    }
+    .volume-slider {
+        width: 60px; /* Adjust volume slider width for mobile */
+    }
+}
+
+/* Desktop specific styles (min-width: 768px) */
+@media (min-width: 768px) {
+    /* Show desktop navigation and search */
+    #main-header nav {
+        display: block;
+    }
+    #main-header #search-toggle-btn {
+        display: block; /* Show desktop search toggle */
+    }
+    #main-header #search-input-wrapper {
+        display: block; /* Show desktop search input */
+    }
+    /* Hide mobile bottom navigation on desktop */
+    #mobile-bottom-nav {
+        display: none;
+    }
+    /* Hide the mobile search overlay on desktop */
+    #mobile-search-overlay {
+        display: none;
+    }
+
+    /* Desktop Detail Overlay Specific Styles */
+    .detail-overlay-content {
+        flex-direction: row; /* Side-by-side on desktop */
+        max-width: 75%; /* Wider on desktop */
+        max-height: 90vh;
+        overflow: hidden; /* Parent overflow hidden */
+    }
+
+    .detail-overlay-content > div:first-child { /* Image container */
+        width: 33.333%; /* 1/3 width */
+        height: auto; /* Auto height */
+        position: relative;
+        border-radius: 0.5rem 0 0 0.5rem; /* Rounded left corners */
+    }
+
+    .detail-overlay-content > div:first-child img {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+        border-radius: 0.5rem 0 0 0.5rem; /* Rounded left corners */
+    }
+
+    /* Remove gradient overlay on desktop image */
+    .detail-overlay-content > div:first-child::after {
+        content: none;
+    }
+
+    .detail-overlay-content > div:last-child { /* Text details container */
+        width: 66.666%; /* 2/3 width */
+        padding: 2rem; /* Standard padding */
+        overflow-y: auto; /* Enable scrolling for details */
+        max-height: 90vh; /* Match parent height */
+    }
+
+    .detail-overlay-content .flex.space-x-4.mb-6 { /* Play & Add to List buttons */
+        flex-direction: row; /* Side-by-side on desktop */
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .detail-overlay-content .flex.space-x-4.mb-6 button {
+        width: auto; /* Auto width buttons */
+    }
+
+    /* Reset font sizes for desktop */
+    .detail-overlay-content h2 {
+        font-size: 3rem;
+    }
+    .detail-overlay-content p {
+        font-size: 1rem;
+    }
+    .detail-overlay-content .grid {
+        font-size: 0.9rem;
+    }
+
+    /* Video Player Overlay adjustments for desktop */
+    #video-player-overlay .video-container {
+        width: 90%;
+        max-width: 1200px;
+        height: auto;
+    }
+    #video-player-overlay .close-video-btn {
+        font-size: 2.5rem;
+        width: 3rem;
+        height: 3rem;
+        top: 1rem;
+        right: 1rem;
+    }
+    .player-controls {
+        padding: 1rem;
+    }
+    .controls-bottom-row {
+        flex-direction: row; /* Side-by-side on desktop */
+        align-items: center;
+    }
+    .controls-bottom-row > div {
+        width: auto;
+        justify-content: flex-start;
+    }
+    .controls-bottom-row .flex.items-center.gap-2 {
+        justify-content: flex-end;
+    }
+    .volume-slider {
+        width: 80px;
+    }
+}
