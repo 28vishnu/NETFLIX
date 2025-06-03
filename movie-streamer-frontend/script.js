@@ -41,13 +41,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const heroDotsContainer = document.getElementById('hero-dots-container');
 
     const detailOverlayContainer = document.getElementById('detail-overlay-container');
-    // messageBox is dynamically created/appended, so no need to get it here initially
+    const videoPlayerOverlay = document.getElementById('video-player-overlay');
+    const moviePlayer = document.getElementById('movie-player');
+    const closeVideoBtn = document.querySelector('#video-player-overlay .close-video-btn');
+
 
     // --- Global Variables ---
     let currentHeroSlide = 0;
     let heroInterval;
     let lastScrollY = 0; // For header hide/show on scroll
     let userId = localStorage.getItem('netflixCloneUserId'); // Get user ID from local storage
+    // Check for admin mode (simple frontend check)
+    const isAdminMode = window.location.search.includes('admin=true');
+
 
     // Generate a unique user ID if one doesn't exist (for My List persistence)
     if (!userId) {
@@ -171,6 +177,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * Checks if a URL is likely a direct video file URL.
+     * @param {string} url - The URL to check.
+     * @returns {boolean} True if it looks like a direct video file, false otherwise.
+     */
+    const isDirectVideoUrl = (url) => {
+        if (!url || typeof url !== 'string') return false;
+        const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv']; // Common video extensions
+        return videoExtensions.some(ext => url.toLowerCase().includes(ext));
+    };
+
+
+    /**
      * Creates a movie/series card element.
      * @param {object} item - The movie/series data object.
      * @returns {HTMLElement} The created movie card div.
@@ -251,6 +269,49 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * Displays the video player overlay.
+     * @param {string} videoUrl - The URL of the video to play.
+     * @param {string} title - The title of the content.
+     */
+    const openVideoPlayer = (videoUrl, title) => {
+        // Check if the URL is a direct video file. If not, open in new tab.
+        // This is a basic check; more robust validation might be needed for production.
+        if (!isDirectVideoUrl(videoUrl)) {
+            showMessageBox(`This link cannot be played directly within the app. Opening in a new tab.`, 'info');
+            window.open(videoUrl, '_blank');
+            return;
+        }
+
+        moviePlayer.src = videoUrl;
+        moviePlayer.load(); // Load the video
+        moviePlayer.play().catch(error => {
+            console.error('Error playing video automatically:', error);
+            showMessageBox('Failed to play video automatically. Please try manually or check the link.', 'error');
+        });
+
+        videoPlayerOverlay.classList.add('active');
+        videoPlayerOverlay.style.display = 'flex'; // Ensure display is flex for transition
+        document.body.classList.add('overflow-hidden'); // Prevent scrolling body
+        showMessageBox(`Playing: ${title}`, 'info');
+    };
+
+    /**
+     * Closes the video player overlay.
+     */
+    const closeVideoPlayer = () => {
+        moviePlayer.pause();
+        moviePlayer.currentTime = 0; // Reset video to start
+        moviePlayer.src = ''; // Clear source to stop loading/playing
+
+        videoPlayerOverlay.classList.remove('active');
+        setTimeout(() => {
+            videoPlayerOverlay.style.display = 'none'; // Hide completely after transition
+            document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
+        }, 300); // Matches CSS transition duration
+    };
+
+
+    /**
      * Fetches details for a specific movie/series and displays them in an overlay.
      * @param {string} imdbId - The IMDb ID of the movie/series.
      * @param {string} type - The type of content ('movie' or 'series').
@@ -271,6 +332,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-gray-500 cursor-not-allowed';
                 const playButtonDisabled = !data.telegramPlayableUrl;
+
+                // Admin section HTML (conditionally rendered based on isAdminMode)
+                const adminSectionHtml = isAdminMode ? `
+                    <div class="mt-4 p-4 bg-gray-800 rounded-md">
+                        <h3 class="text-lg font-semibold mb-2">Set Playable URL (Admin)</h3>
+                        <input type="url" id="playable-url-input" placeholder="Paste Telegram playable URL here"
+                               class="w-full bg-gray-700 text-white px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
+                               value="${data.telegramPlayableUrl || ''}">
+                        <button id="save-playable-url-btn"
+                                class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-700 transition-colors">
+                            Save Playable URL
+                        </button>
+                    </div>
+                ` : '';
 
 
                 detailOverlayContainer.innerHTML = `
@@ -307,17 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <i class="fas fa-plus mr-2"></i> Add to My List
                                 </button>
                             </div>
-
-                            <div class="mt-4 p-4 bg-gray-800 rounded-md">
-                                <h3 class="text-lg font-semibold mb-2">Set Playable URL (Admin)</h3>
-                                <input type="url" id="playable-url-input" placeholder="Paste Telegram playable URL here"
-                                       class="w-full bg-gray-700 text-white px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                                       value="${data.telegramPlayableUrl || ''}">
-                                <button id="save-playable-url-btn"
-                                        class="mt-3 bg-blue-600 text-white px-4 py-2 rounded-md font-semibold hover:bg-blue-700 transition-colors">
-                                    Save Playable URL
-                                </button>
-                            </div>
+                            ${adminSectionHtml}
                         </div>
                     </div>
                 `;
@@ -340,9 +405,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (playBtn) {
                     playBtn.addEventListener('click', (e) => {
                         const url = e.currentTarget.dataset.url;
+                        const title = e.currentTarget.dataset.title;
                         if (url) {
-                            window.open(url, '_blank'); // Open URL in new tab
-                            showMessageBox(`Opening playable link for ${e.currentTarget.dataset.title || 'content'}`, 'info');
+                            openVideoPlayer(url, title); // Use the new video player function
                         } else {
                             showMessageBox('No playable link available for this content.', 'info');
                         }
@@ -364,18 +429,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                // Save Playable URL button functionality
-                const savePlayableUrlBtn = detailOverlayContainer.querySelector('#save-playable-url-btn');
-                if (savePlayableUrlBtn) {
-                    savePlayableUrlBtn.addEventListener('click', async () => {
-                        const urlInput = document.getElementById('playable-url-input');
-                        const newUrl = urlInput.value.trim();
-                        if (newUrl) {
-                            await setPlayableUrl(imdbId, type, newUrl);
-                        } else {
-                            showMessageBox('Please enter a valid URL.', 'error');
-                        }
-                    });
+                // Save Playable URL button functionality (only if admin section is visible)
+                if (isAdminMode) {
+                    const savePlayableUrlBtn = detailOverlayContainer.querySelector('#save-playable-url-btn');
+                    if (savePlayableUrlBtn) {
+                        savePlayableUrlBtn.addEventListener('click', async () => {
+                            const urlInput = document.getElementById('playable-url-input');
+                            const newUrl = urlInput.value.trim();
+                            if (newUrl) {
+                                await setPlayableUrl(imdbId, type, newUrl);
+                            } else {
+                                showMessageBox('Please enter a valid URL.', 'error');
+                            }
+                        });
+                    }
                 }
 
             } else {
@@ -502,9 +569,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const url = e.currentTarget.dataset.url;
+                            const title = e.currentTarget.dataset.title;
                             if (url) {
-                                window.open(url, '_blank');
-                                showMessageBox(`Opening playable link for ${e.currentTarget.dataset.title || 'content'}`, 'info');
+                                openVideoPlayer(url, title); // Use the new video player function
                             } else {
                                 showMessageBox('No playable link available for this content.', 'info');
                             }
@@ -765,6 +832,17 @@ document.addEventListener('DOMContentLoaded', () => {
             mobileSearchInput.value = ''; // Clear input
             document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
             mobileSearchResultsContainer.innerHTML = ''; // Clear search results
+        });
+    }
+
+    // Event listener for closing the video player overlay
+    if (closeVideoBtn) {
+        closeVideoBtn.addEventListener('click', closeVideoPlayer);
+        // Also close if clicking outside the video container
+        videoPlayerOverlay.addEventListener('click', (e) => {
+            if (e.target === videoPlayerOverlay) {
+                closeVideoPlayer();
+            }
         });
     }
 
