@@ -14,8 +14,7 @@
             background-color: #141414; /* Netflix dark background */
             color: #e5e5e5; /* Netflix light gray text */
             overflow-x: hidden; /* Prevent horizontal scroll on body */
-            /* Add padding bottom for mobile to prevent content being hidden by bottom nav */
-            padding-bottom: 0; /* Default for desktop */
+            padding-bottom: 0; /* Default for desktop, adjusted by media query for mobile */
         }
 
         /* Custom scrollbar-hide for horizontal sections (Netflix style) */
@@ -251,7 +250,7 @@
             opacity: 1;
         }
 
-        /* Mobile specific styles */
+        /* Mobile specific styles (max-width: 767px) */
         @media (max-width: 767px) {
             /* Adjust body padding to account for fixed bottom nav */
             body {
@@ -272,26 +271,27 @@
 
             /* Show mobile bottom navigation */
             #mobile-bottom-nav {
-                display: flex;
+                display: flex; /* Override default display: none */
             }
 
-            /* Mobile search input wrapper (if toggled) */
+            /* Mobile search input wrapper (appears above bottom nav) */
             #mobile-search-input-wrapper {
-                position: absolute;
-                bottom: 100%; /* Position above the bottom nav */
+                position: fixed; /* Changed from absolute to fixed */
+                bottom: 60px; /* Position above the bottom nav (approx 60px height) */
                 left: 0;
                 width: 100%;
                 background-color: #141414;
                 padding: 0.5rem 1rem;
                 box-shadow: 0 -2px 5px rgba(0,0,0,0.5); /* Shadow above */
                 z-index: 55; /* Above bottom nav, below main header */
+                display: none; /* Hidden by default, toggled by JS */
             }
             #mobile-search-input {
                 width: 100%;
             }
         }
 
-        /* Desktop specific styles */
+        /* Desktop specific styles (min-width: 768px) */
         @media (min-width: 768px) {
             /* Show desktop navigation and search */
             #main-header nav {
@@ -319,6 +319,7 @@
             background-color: #1a1a1a; /* Darker background than body */
             border-top: 1px solid #333;
             padding: 10px 0;
+            height: 60px; /* Fixed height for the bottom nav */
             z-index: 99;
             justify-content: space-around;
             align-items: center;

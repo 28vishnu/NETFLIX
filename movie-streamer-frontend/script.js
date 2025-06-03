@@ -162,11 +162,22 @@ document.addEventListener('DOMContentLoaded', () => {
         card.dataset.imdbId = item.imdbID; // Store IMDb ID for detail fetching
         card.dataset.type = item.type; // Store type (movie/series)
 
-        // Use a placeholder image if the poster is 'N/A' or an empty string
-        const posterUrl = item.poster && item.poster !== 'N/A' ? item.poster : `https://placehold.co/300x450/000000/FFFFFF?text=${encodeURIComponent(item.title || 'No Title')}`;
+        // Determine poster URL with robust fallback handling
+        let posterUrl = item.poster;
+        if (!posterUrl || // Checks for null, undefined, empty string
+            posterUrl === 'N/A' || // Checks for the specific 'N/A' string
+            posterUrl.toLowerCase() === 'null' || // Checks for string "null"
+            posterUrl.toLowerCase() === 'undefined' || // Checks for string "undefined"
+            posterUrl.trim() === '' // Checks for whitespace-only strings
+        ) {
+            // Fallback to placehold.co with the movie title
+            posterUrl = `https://placehold.co/300x450/000000/FFFFFF?text=${encodeURIComponent(item.title || 'No Title')}`;
+        }
+        // console.log(`Card for ${item.title}: Final Poster URL is ${posterUrl}`); // Uncomment for debugging
 
         card.innerHTML = `
-            <img src="${posterUrl}" alt="${item.title || 'No Title'} Poster" class="w-full h-48 md:h-60 lg:h-72 object-cover rounded-md" onerror="this.onerror=null;this.src='https://placehold.co/300x450/000000/FFFFFF?text=No+Image';">
+            <img src="${posterUrl}" alt="${item.title || 'No Title'} Poster" class="w-full h-48 md:h-60 lg:h-72 object-cover rounded-md"
+                 onerror="this.onerror=null;this.src='https://placehold.co/300x450/000000/FFFFFF?text=Image+Missing'; console.error('Image failed to load for: ${item.title || 'No Title'} (${item.imdbID})');">
             <div class="movie-card-info absolute bottom-0 left-0 right-0 p-2 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-black via-black/70 to-transparent">
                 <h3 class="text-sm md:text-base font-semibold truncate">${item.title || 'No Title'}</h3>
                 <p class="text-xs text-gray-400">${item.year || 'N/A'}</p>
@@ -262,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <p><strong>Writer:</strong> ${data.writer || 'N/A'}</p>
                                 <p><strong>Actors:</strong> ${data.actors || 'N/A'}</p>
                                 <p><strong>Language:</strong> ${data.language || 'N/A'}</p>
-                                <p><strong>Country:</strong> ${data.country || 'N/A'}</p>
+                                <p><strong>Country:</b> ${data.country || 'N/A'}</p>
                                 <p><strong>Awards:</strong> ${data.awards || 'N/A'}</p>
                                 <p><strong>IMDb Rating:</strong> ${data.imdbRating || 'N/A'}</p>
                                 <p><strong>IMDb ID:</strong> ${data.imdbID || 'N/A'}</p>
@@ -611,6 +622,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Remove 'active' from other nav links in bottom bar, search becomes active
+            // This ensures only the clicked item (search in this case) is active
             mobileBottomNav.querySelectorAll('.nav-link').forEach(nav => nav.classList.remove('active'));
             e.currentTarget.classList.add('active');
         });
