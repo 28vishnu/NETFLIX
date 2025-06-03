@@ -66,25 +66,18 @@ const mapTmdbToSchema = async (tmdbItem, type) => {
     if (!tmdbItem) return null;
 
     let imdbId = null;
-    let director = 'N/A';
-    let actors = 'N/A';
-    let runtime = 'N/A';
-    let totalSeasons = 'N/A';
-
-    // Fetch external IDs to get IMDb ID
-    if (tmdbItem.id) {
+    // Fetch external IDs to get IMDb ID only if tmdbId exists and is not already fetched
+    if (tmdbItem.id && !tmdbItem.imdb_id) { // Check if imdb_id is already present (e.g., from /find endpoint)
         try {
             const externalIds = await fetchTmdb(`/${type === 'movie' ? 'movie' : 'tv'}/${tmdbItem.id}/external_ids`);
             imdbId = externalIds.imdb_id || null;
         } catch (error) {
             console.warn(`Could not fetch external IDs for ${type} TMDB ID ${tmdbItem.id}:`, error.message);
         }
+    } else if (tmdbItem.imdb_id) {
+        imdbId = tmdbItem.imdb_id;
     }
 
-    // Fetch credits for director/actors (only for details, not for lists to save API calls)
-    // This mapping function is used for both lists and details, so we'll only fetch credits
-    // if full details are needed (which is handled in the specific detail routes).
-    // For list items, director/actors will be N/A initially unless explicitly fetched.
 
     // Map common fields
     const mappedItem = {
@@ -149,39 +142,59 @@ mongoose.connect(MONGO_URI, { dbName: DB_NAME })
 
 // --- API Routes ---
 
-// Get Trending Movies (for Hero Section)
+// Get Trending Movies (for Hero Section) - Now fetches trending movies from the last week
 app.get('/api/movies/trending', async (req, res) => {
     try {
+        // Fetch trending movies over the last week - this is a good proxy for recent OTT releases
         const data = await fetchTmdb('/trending/movie/week');
+
         const trendingMovies = [];
-        for (const item of data.results.slice(0, 10)) { // Take top 10 trending
+        // Iterate through results, ensuring we get up to 5 valid movies
+        for (const item of data.results) {
+            if (trendingMovies.length >= 5) break; // Stop after 5 movies
+
             const mapped = await mapTmdbToSchema(item, 'movie');
-            if (mapped && mapped.imdbID) { // Ensure it has an IMDb ID for frontend consistency
-                 // Check if movie already exists in DB to get playable URL
+            // Ensure essential fields are present for the hero banner
+            if (mapped && mapped.imdbID && mapped.poster && mapped.backdrop) {
+                // Check if movie already exists in DB to get playable URL
                 const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                 if (existingMovie) {
                     mapped.telegramPlayableUrl = existingMovie.telegramPlayableUrl;
+                } else {
+                    // If not in DB, save it so playable URL can be set later
+                    const newMovie = new Movie(mapped);
+                    await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
                 }
                 trendingMovies.push(mapped);
             }
         }
         res.json(trendingMovies);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch trending movies', details: error.message });
+        res.status(500).json({ error: 'Failed to fetch trending movies for hero banner', details: error.message });
     }
 });
 
 // Get Popular Movies
 app.get('/api/movies/popular', async (req, res) => {
     try {
-        const data = await fetchTmdb('/movie/popular');
+        const allTmdbMovies = [];
+        // Fetch more pages to get a larger pool of popular movies
+        for (let i = 1; i <= 3; i++) { // Fetch first 3 pages
+            const data = await fetchTmdb('/movie/popular', { page: i });
+            allTmdbMovies.push(...data.results);
+        }
+
         const popularMovies = [];
-        for (const item of data.results.slice(0, 20)) { // Limit to 20 for section
+        for (const item of allTmdbMovies) {
+            if (popularMovies.length >= 20) break; // Limit to 20 for section
             const mapped = await mapTmdbToSchema(item, 'movie');
-            if (mapped && mapped.imdbID) {
+            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
                 const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                 if (existingMovie) {
                     mapped.telegramPlayableUrl = existingMovie.telegramPlayableUrl;
+                } else {
+                    const newMovie = new Movie(mapped);
+                    await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
                 }
                 popularMovies.push(mapped);
             }
@@ -192,17 +205,27 @@ app.get('/api/movies/popular', async (req, res) => {
     }
 });
 
-// Get Best Series (using popular as a proxy for now)
+// Get Best Series (using top_rated)
 app.get('/api/series/best', async (req, res) => {
     try {
-        const data = await fetchTmdb('/tv/top_rated'); // Using top_rated for "best"
+        const allTmdbSeries = [];
+        // Fetch more pages to get a larger pool of top-rated series
+        for (let i = 1; i <= 3; i++) { // Fetch first 3 pages
+            const data = await fetchTmdb('/tv/top_rated', { page: i });
+            allTmdbSeries.push(...data.results);
+        }
+
         const bestSeries = [];
-        for (const item of data.results.slice(0, 20)) { // Limit to 20 for section
+        for (const item of allTmdbSeries) {
+            if (bestSeries.length >= 20) break; // Limit to 20 for section
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID) {
+            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (existingSeries) {
                     mapped.telegramPlayableUrl = existingSeries.telegramPlayableUrl;
+                } else {
+                    const newSeries = new Series(mapped);
+                    await newSeries.save().catch(saveErr => console.error("Error saving new series from TMDB:", saveErr.message));
                 }
                 bestSeries.push(mapped);
             }
@@ -216,14 +239,24 @@ app.get('/api/series/best', async (req, res) => {
 // Get Popular Series
 app.get('/api/series/popular', async (req, res) => {
     try {
-        const data = await fetchTmdb('/tv/popular');
+        const allTmdbSeries = [];
+        // Fetch more pages to get a larger pool of popular series
+        for (let i = 1; i <= 3; i++) { // Fetch first 3 pages
+            const data = await fetchTmdb('/tv/popular', { page: i });
+            allTmdbSeries.push(...data.results);
+        }
+
         const popularSeries = [];
-        for (const item of data.results.slice(0, 20)) { // Limit to 20 for section
+        for (const item of allTmdbSeries) {
+            if (popularSeries.length >= 20) break; // Limit to 20 for section
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID) {
+            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (existingSeries) {
                     mapped.telegramPlayableUrl = existingSeries.telegramPlayableUrl;
+                } else {
+                    const newSeries = new Series(mapped);
+                    await newSeries.save().catch(saveErr => console.error("Error saving new series from TMDB:", saveErr.message));
                 }
                 popularSeries.push(mapped);
             }
@@ -244,14 +277,23 @@ app.get('/api/movies/genre/:genreName', async (req, res) => {
     }
 
     try {
-        const data = await fetchTmdb('/discover/movie', { with_genres: genreId });
+        const allTmdbMovies = [];
+        for (let i = 1; i <= 3; i++) { // Fetch first 3 pages
+            const data = await fetchTmdb('/discover/movie', { with_genres: genreId, page: i });
+            allTmdbMovies.push(...data.results);
+        }
+
         const genreMovies = [];
-        for (const item of data.results.slice(0, 20)) { // Limit to 20 for section
+        for (const item of allTmdbMovies) {
+            if (genreMovies.length >= 20) break; // Limit to 20 for section
             const mapped = await mapTmdbToSchema(item, 'movie');
-            if (mapped && mapped.imdbID) {
+            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
                 const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                 if (existingMovie) {
                     mapped.telegramPlayableUrl = existingMovie.telegramPlayableUrl;
+                } else {
+                    const newMovie = new Movie(mapped);
+                    await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
                 }
                 genreMovies.push(mapped);
             }
@@ -272,14 +314,23 @@ app.get('/api/series/genre/:genreName', async (req, res) => {
     }
 
     try {
-        const data = await fetchTmdb('/discover/tv', { with_genres: genreId });
+        const allTmdbSeries = [];
+        for (let i = 1; i <= 3; i++) { // Fetch first 3 pages
+            const data = await fetchTmdb('/discover/tv', { with_genres: genreId, page: i });
+            allTmdbSeries.push(...data.results);
+        }
+
         const genreSeries = [];
-        for (const item of data.results.slice(0, 20)) { // Limit to 20 for section
+        for (const item of allTmdbSeries) {
+            if (genreSeries.length >= 20) break; // Limit to 20 for section
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID) {
+            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (existingSeries) {
                     mapped.telegramPlayableUrl = existingSeries.telegramPlayableUrl;
+                } else {
+                    const newSeries = new Series(mapped);
+                    await newSeries.save().catch(saveErr => console.error("Error saving new series from TMDB:", saveErr.message));
                 }
                 genreSeries.push(mapped);
             }
@@ -293,18 +344,22 @@ app.get('/api/series/genre/:genreName', async (req, res) => {
 // Get All Movies (for Movies page)
 app.get('/api/movies', async (req, res) => {
     try {
-        // Fetch multiple pages to get more results for the "All Movies" page
-        const page1 = await fetchTmdb('/movie/popular', { page: 1 });
-        const page2 = await fetchTmdb('/movie/popular', { page: 2 });
-        const allTmdbMovies = [...page1.results, ...page2.results]; // Combine results
+        const allTmdbMovies = [];
+        for (let i = 1; i <= 5; i++) { // Fetch first 5 pages for a larger collection
+            const data = await fetchTmdb('/movie/popular', { page: i });
+            allTmdbMovies.push(...data.results);
+        }
 
         const movies = [];
         for (const item of allTmdbMovies) {
             const mapped = await mapTmdbToSchema(item, 'movie');
-            if (mapped && mapped.imdbID) {
+            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
                 const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                 if (existingMovie) {
                     mapped.telegramPlayableUrl = existingMovie.telegramPlayableUrl;
+                } else {
+                    const newMovie = new Movie(mapped);
+                    await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
                 }
                 movies.push(mapped);
             }
@@ -318,17 +373,22 @@ app.get('/api/movies', async (req, res) => {
 // Get All Series (for Series page)
 app.get('/api/series', async (req, res) => {
     try {
-        const page1 = await fetchTmdb('/tv/popular', { page: 1 });
-        const page2 = await fetchTmdb('/tv/popular', { page: 2 });
-        const allTmdbSeries = [...page1.results, ...page2.results];
+        const allTmdbSeries = [];
+        for (let i = 1; i <= 5; i++) { // Fetch first 5 pages for a larger collection
+            const data = await fetchTmdb('/tv/popular', { page: i });
+            allTmdbSeries.push(...data.results);
+        }
 
         const series = [];
         for (const item of allTmdbSeries) {
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID) {
+            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (existingSeries) {
                     mapped.telegramPlayableUrl = existingSeries.telegramPlayableUrl;
+                } else {
+                    const newSeries = new Series(mapped);
+                    await newSeries.save().catch(saveErr => console.error("Error saving new series from TMDB:", saveErr.message));
                 }
                 series.push(mapped);
             }
@@ -352,7 +412,8 @@ app.get('/api/movies/:imdbId', async (req, res) => {
         }
 
         if (!tmdbMovieId) {
-            return res.status(404).json({ message: 'Movie not found on TMDB with this IMDb ID.' });
+            // If TMDB doesn't have a direct mapping for this IMDb ID, return a more specific error
+            return res.status(404).json({ message: `Movie with IMDb ID ${imdbId} not found on TMDB.` });
         }
 
         // Fetch full movie details
@@ -374,6 +435,10 @@ app.get('/api/movies/:imdbId', async (req, res) => {
         const existingMovie = await Movie.findOne({ imdbID: imdbId });
         if (existingMovie) {
             mappedMovie.telegramPlayableUrl = existingMovie.telegramPlayableUrl;
+        } else {
+             // If not in DB, save it so playable URL can be set later
+            const newMovie = new Movie(mappedMovie);
+            await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
         }
 
         res.json(mappedMovie);
@@ -397,7 +462,8 @@ app.get('/api/series/:imdbId', async (req, res) => {
         }
 
         if (!tmdbSeriesId) {
-            return res.status(404).json({ message: 'Series not found on TMDB with this IMDb ID.' });
+            // If TMDB doesn't have a direct mapping for this IMDb ID, return a more specific error
+            return res.status(404).json({ message: `Series with IMDb ID ${imdbId} not found on TMDB.` });
         }
 
         // Fetch full series details
@@ -415,6 +481,10 @@ app.get('/api/series/:imdbId', async (req, res) => {
         const existingSeries = await Series.findOne({ imdbID: imdbId });
         if (existingSeries) {
             mappedSeries.telegramPlayableUrl = existingSeries.telegramPlayableUrl;
+        } else {
+             // If not in DB, save it so playable URL can be set later
+            const newSeries = new Series(mappedSeries);
+            await newSeries.save().catch(saveErr => console.error("Error saving new series from TMDB:", saveErr.message));
         }
 
         res.json(mappedSeries);
@@ -436,26 +506,52 @@ app.put('/api/:type/:imdbId/set-playable-url', async (req, res) => {
 
     try {
         let updatedItem;
+        let Model;
         if (type === 'movies') {
-            updatedItem = await Movie.findOneAndUpdate(
-                { imdbID: imdbId },
-                { telegramPlayableUrl: url },
-                { new: true, upsert: true } // Create if not exists, return updated doc
-            );
+            Model = Movie;
         } else if (type === 'series') {
-            updatedItem = await Series.findOneAndUpdate(
-                { imdbID: imdbId },
-                { telegramPlayableUrl: url },
-                { new: true, upsert: true }
-            );
+            Model = Series;
         } else {
             return res.status(400).json({ message: 'Invalid content type.' });
         }
 
+        // Find the item by IMDb ID
+        updatedItem = await Model.findOneAndUpdate(
+            { imdbID: imdbId },
+            { telegramPlayableUrl: url },
+            { new: true } // Return the updated document
+        );
+
+        // If not found by IMDb ID, it means it was just fetched from TMDB and not yet saved with IMDb ID
+        // In this case, we might need to find by TMDB ID if available, or create a new entry.
+        // However, the mapTmdbToSchema now attempts to get IMDb ID and save, so this should be less common.
+        if (!updatedItem) {
+            // As a fallback, try to fetch details again to ensure it's in DB before updating
+            // This scenario should be rare if mapTmdbToSchema is working correctly on initial fetch
+            const findData = await fetchTmdb(`/find/${imdbId}`, { external_source: 'imdb_id' });
+            let tmdbItem = null;
+            if (type === 'movies' && findData.movie_results && findData.movie_results.length > 0) {
+                tmdbItem = findData.movie_results[0];
+            } else if (type === 'series' && findData.tv_results && findData.tv_results.length > 0) {
+                tmdbItem = findData.tv_results[0];
+            }
+
+            if (tmdbItem) {
+                const mapped = await mapTmdbToSchema(tmdbItem, type === 'movies' ? 'movie' : 'series');
+                mapped.imdbID = imdbId; // Ensure IMDb ID is explicitly set
+                updatedItem = await Model.findOneAndUpdate(
+                    { imdbID: imdbId },
+                    { $set: { ...mapped, telegramPlayableUrl: url } }, // Update all fields and set URL
+                    { new: true, upsert: true } // Create if not exists, return updated doc
+                );
+            }
+        }
+
+
         if (updatedItem) {
             res.json({ message: 'Playable URL updated successfully!', item: updatedItem });
         } else {
-            res.status(404).json({ message: 'Item not found in database.' });
+            res.status(404).json({ message: 'Item not found in database for update.' });
         }
     } catch (error) {
         console.error(`Error setting playable URL for ${type} ${imdbId}:`, error);
@@ -487,6 +583,9 @@ app.get('/api/search', async (req, res) => {
                     const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                     if (existingMovie) {
                         mapped.telegramPlayableUrl = existingMovie.telegramPlayableUrl;
+                    } else {
+                        const newMovie = new Movie(mapped);
+                        await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
                     }
                     movies.push(mapped);
                 }
@@ -496,6 +595,9 @@ app.get('/api/search', async (req, res) => {
                     const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                     if (existingSeries) {
                         mapped.telegramPlayableUrl = existingSeries.telegramPlayableUrl;
+                    } else {
+                        const newSeries = new Series(mapped);
+                        await newSeries.save().catch(saveErr => console.error("Error saving new series from TMDB:", saveErr.message));
                     }
                     series.push(mapped);
                 }
@@ -585,4 +687,3 @@ app.post('/api/mylist/remove', async (req, res) => {
 app.use((req, res) => {
     res.status(404).json({ message: 'API route not found' });
 });
-
