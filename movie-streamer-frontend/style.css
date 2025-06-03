@@ -171,8 +171,11 @@ body {
     opacity: 1;
 }
 
-#hero-prev-btn { left: 1rem; }
-#hero-next-btn { right: 1rem; }
+/* Hide hero navigation buttons for single image display */
+#hero-prev-btn, #hero-next-btn {
+    display: none;
+}
+
 
 .hero-dots-container {
     position: absolute;
@@ -184,18 +187,11 @@ body {
     z-index: 20;
 }
 
-.hero-dots-container div { /* Changed from span to div for consistency with script.js */
-    height: 0.5rem;
-    width: 0.5rem;
-    background-color: rgba(255, 255, 255, 0.5);
-    border-radius: 50%;
-    cursor: pointer;
-    transition: background-color 0.3s;
+/* Hide hero dots for single image display */
+.hero-dots-container {
+    display: none;
 }
 
-.hero-dots-container div.bg-white { /* Changed from span to div */
-    background-color: white;
-}
 
 /* Movie card specific styling for hover effects */
 .movie-card-container { /* Renamed from .movie-card for consistency */
