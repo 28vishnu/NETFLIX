@@ -171,10 +171,9 @@ body {
     opacity: 1;
 }
 
-/* Hide hero navigation buttons for single image display */
-#hero-prev-btn, #hero-next-btn {
-    display: none;
-}
+/* Ensure hero navigation buttons are visible for carousel */
+#hero-prev-btn { left: 1rem; display: flex; } /* Changed from none to flex */
+#hero-next-btn { right: 1rem; display: flex; } /* Changed from none to flex */
 
 
 .hero-dots-container {
@@ -182,14 +181,22 @@ body {
     bottom: 1rem;
     left: 50%;
     transform: translateX(-50%);
-    display: flex;
+    display: flex; /* Changed from none to flex */
     gap: 0.5rem;
     z-index: 20;
 }
 
-/* Hide hero dots for single image display */
-.hero-dots-container {
-    display: none;
+.hero-dots-container div { /* Changed from span to div for consistency with script.js */
+    height: 0.5rem;
+    width: 0.5rem;
+    background-color: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.hero-dots-container div.bg-white { /* Changed from span to div */
+    background-color: white;
 }
 
 
@@ -839,10 +846,10 @@ body {
         display: block;
     }
     #main-header #search-toggle-btn {
-        display: block; /* Show desktop search toggle */
+        display: block;
     }
     #main-header #search-input-wrapper {
-        display: block; /* Show desktop search input */
+        display: block;
     }
     /* Hide mobile bottom navigation on desktop */
     #mobile-bottom-nav {

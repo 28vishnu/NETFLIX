@@ -30,16 +30,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hero Section Elements
     const heroSection = document.getElementById('hero-section');
     const heroSlidesContainer = document.getElementById('hero-slides-container');
-    const heroPrevBtn = document.getElementById('hero-prev-btn'); // Will be hidden by CSS
-    const heroNextBtn = document.getElementById('hero-next-btn'); // Will be hidden by CSS
-    const heroDotsContainer = document.getElementById('hero-dots-container'); // Will be hidden by CSS
+    const heroPrevBtn = document.getElementById('hero-prev-btn');
+    const heroNextBtn = document.getElementById('hero-next-btn');
+    const heroDotsContainer = document.getElementById('hero-dots-container');
 
     const detailOverlayContainer = document.getElementById('detail-overlay-container');
     // messageBox is dynamically created/appended, so no need to get it here initially
 
     // --- Global Variables ---
+    let currentHeroSlide = 0; // Re-enabled for carousel
+    let heroInterval; // Re-enabled for carousel
     let lastScrollY = 0; // For header hide/show on scroll
     let userId = localStorage.getItem('netflixCloneUserId'); // Get user ID from local storage
+    let heroMoviesData = []; // Re-enabled to store multiple hero movie data
 
     // Generate a unique user ID if one doesn't exist (for My List persistence)
     if (!userId) {
@@ -350,52 +353,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300); // Matches the CSS transition duration
     };
 
-    // --- Hero Section (Single Image) Functions ---
+    // --- Hero Section (Carousel) Functions ---
     /**
-     * Fetches a single hero movie and populates the hero section.
+     * Fetches hero movies and populates the hero section.
      * @returns {Promise<void>} A promise that resolves when hero content is fetched and displayed.
      */
-    const fetchHeroMovie = async () => { // Renamed from fetchHeroMovies
-        console.log("Fetching single hero movie...");
+    const fetchHeroMovies = async () => { // Renamed back to fetchHeroMovies
+        console.log("Fetching hero movies for carousel...");
         try {
             const data = await fetchData(`${API_BASE_URL}/movies/trending`);
 
             if (data && data.length > 0) {
-                const heroMovie = data.filter(item => isValidPosterUrl(item.poster))[0]; // Get only the first valid movie
+                heroMoviesData = data.filter(item => isValidPosterUrl(item.poster)).slice(0, 5); // Store valid hero movies globally
 
-                if (heroMovie) {
-                    console.log(`Found valid trending movie for hero section: ${heroMovie.title}.`);
-                    heroSlidesContainer.innerHTML = ''; // Clear any existing slides
-                    heroDotsContainer.innerHTML = ''; // Ensure dots are cleared/hidden
+                if (heroMoviesData.length > 0) {
+                    console.log(`Found ${heroMoviesData.length} valid trending movies for hero section.`);
+                    heroSlidesContainer.innerHTML = '';
+                    heroDotsContainer.innerHTML = '';
 
-                    const slide = document.createElement('div');
-                    slide.className = 'hero-slide'; // Keep class for text content styling
-                    // No background-image set on slide, it's set on #hero-section::before
+                    heroMoviesData.forEach((movie, index) => {
+                        const slide = document.createElement('div');
+                        slide.className = 'hero-slide';
 
-                    slide.innerHTML = `
-                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
-                        <div class="hero-text-content">
-                            <h1 class="text-4xl md:text-6xl font-bold mb-4">${heroMovie.title || 'No Title'}</h1>
-                            <p class="text-lg md:text-xl mb-6 line-clamp-3">${heroMovie.plot || 'No description available.'}</p>
-                            <div class="flex space-x-4">
-                                <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${heroMovie.imdbID}" data-type="${heroMovie.type}" data-title="${heroMovie.title}">
-                                    <i class="fas fa-play mr-2"></i> Play
-                                </button>
-                                <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${heroMovie.imdbID}" data-title="${heroMovie.title}" data-poster="${heroMovie.poster}" data-type="${heroMovie.type}" data-year="${heroMovie.year}">
-                                    <i class="fas fa-plus mr-2"></i> My List
-                                </button>
+                        slide.innerHTML = `
+                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
+                            <div class="hero-text-content">
+                                <h1 class="text-4xl md:text-6xl font-bold mb-4">${movie.title || 'No Title'}</h1>
+                                <p class="text-lg md:text-xl mb-6 line-clamp-3">${movie.plot || 'No description available.'}</p>
+                                <div class="flex space-x-4">
+                                    <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}">
+                                        <i class="fas fa-play mr-2"></i> Play
+                                    </button>
+                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
+                                        <i class="fas fa-plus mr-2"></i> My List
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    heroSlidesContainer.appendChild(slide);
+                        `;
+                        heroSlidesContainer.appendChild(slide);
 
-                    // Set the background image for the hero section using the CSS variable
-                    const heroImageUrl = isValidPosterUrl(heroMovie.poster) ? heroMovie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image';
-                    if (heroSection) {
-                        heroSection.style.setProperty('--hero-bg-image', `url('${heroImageUrl}')`);
-                    }
+                        const dot = document.createElement('div');
+                        dot.className = `w-3 h-3 bg-gray-500 rounded-full cursor-pointer transition-colors ${index === 0 ? 'bg-white' : ''}`;
+                        dot.dataset.slideIndex = index;
+                        dot.addEventListener('click', () => goToSlide(index));
+                        heroDotsContainer.appendChild(dot);
+                    });
 
-                    // Add event listeners for buttons within the single hero slide
+                    // Set initial background image for the hero section
+                    updateHeroCarousel(0); // Set to the first slide and update background
+
+                    // Add event listeners for buttons within hero slides
                     heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             showMessageBox(`Playing ${e.currentTarget.dataset.title || 'content'} (feature coming soon!)`, 'info');
@@ -414,16 +421,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     });
 
-                    // Hide carousel navigation buttons and dots (already handled by CSS, but good to be explicit)
-                    if (heroPrevBtn) heroPrevBtn.style.display = 'none';
-                    if (heroNextBtn) heroNextBtn.style.display = 'none';
-                    if (heroDotsContainer) heroDotsContainer.style.display = 'none';
+                    // Ensure carousel navigation buttons and dots are visible
+                    if (heroPrevBtn) heroPrevBtn.style.display = 'flex'; // Use flex to center icon
+                    if (heroNextBtn) heroNextBtn.style.display = 'flex'; // Use flex to center icon
+                    if (heroDotsContainer) heroDotsContainer.style.display = 'flex'; // Use flex for dots layout
 
-
+                    startHeroCarousel();
                 } else {
-                    console.log("No valid trending movie with image found for hero section. Hiding hero.");
+                    console.log("No valid trending movies with images found for hero section. Hiding hero.");
                     if (heroSection) {
-                        heroSection.innerHTML = '<p class="text-center text-red-500">No trending movie with valid image found for hero section.</p>';
+                        heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies with valid images found for hero section.</p>';
                         heroSection.classList.add('hidden-hero'); // Ensure it's hidden if no valid content
                     }
                 }
@@ -435,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (error) {
-            console.error('Error fetching hero movie:', error);
+            console.error('Error fetching hero movies:', error);
             if (heroSection) { // Check if heroSection exists before manipulating
                 heroSection.innerHTML = '<p class="text-center text-red-500">Error loading hero content. Please try again later.</p>';
                 heroSection.classList.add('hidden-hero'); // Hide if error
@@ -443,8 +450,68 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Removed carousel functions: updateHeroCarousel, nextSlide, prevSlide, goToSlide, startHeroCarousel
-    // These are no longer needed for a single hero image display.
+    /**
+     * Updates the hero carousel display to the specified slide.
+     * @param {number} index - The index of the slide to show.
+     */
+    const updateHeroCarousel = (index) => {
+        const totalSlides = heroSlidesContainer.children.length;
+        if (totalSlides === 0) return;
+
+        currentHeroSlide = (index + totalSlides) % totalSlides;
+        const offset = -currentHeroSlide * 100;
+        heroSlidesContainer.style.transform = `translateX(${offset}%)`;
+
+        // Update dots
+        heroDotsContainer.querySelectorAll('div').forEach((dot, i) => {
+            if (i === currentHeroSlide) {
+                dot.classList.add('bg-white');
+                dot.classList.remove('bg-gray-500');
+            } else {
+                dot.classList.remove('bg-white');
+                dot.classList.add('bg-gray-500');
+            }
+        });
+
+        // Update the background image of the hero-section::before for the current slide
+        if (heroMoviesData.length > 0 && heroSection) {
+            const currentHeroMovie = heroMoviesData[currentHeroSlide];
+            const currentHeroImageUrl = isValidPosterUrl(currentHeroMovie.poster) ? currentHeroMovie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image';
+            heroSection.style.setProperty('--hero-bg-image', `url('${currentHeroImageUrl}')`);
+        }
+    };
+
+    /**
+     * Moves to the next hero slide.
+     */
+    const nextSlide = () => {
+        updateHeroCarousel(currentHeroSlide + 1);
+    };
+
+    /**
+     * Moves to the previous hero slide.
+     */
+    const prevSlide = () => {
+        updateHeroCarousel(currentHeroSlide - 1);
+    };
+
+    /**
+     * Goes to a specific hero slide.
+     * @param {number} index - The index of the slide.
+     */
+    const goToSlide = (index) => {
+        clearInterval(heroInterval); // Stop auto-play when manually navigating
+        updateHeroCarousel(index);
+        startHeroCarousel(); // Restart auto-play
+    };
+
+    /**
+     * Starts the automatic hero carousel rotation.
+     */
+    const startHeroCarousel = () => {
+        clearInterval(heroInterval); // Clear any existing interval
+        heroInterval = setInterval(nextSlide, 5000); // Change slide every 5 seconds
+    };
 
 
     // --- My List Functions ---
@@ -591,6 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showLoading(); // Show loading for search
             movieSectionsContainer.innerHTML = ''; // Clear existing content
             heroSection.classList.add('hidden-hero'); // Hide hero during search
+            clearInterval(heroInterval); // Stop hero carousel when searching
 
             try {
                 console.log("Fetching search results from:", `${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
@@ -635,6 +703,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
 
+    // Hero carousel navigation
+    if (heroNextBtn) heroNextBtn.addEventListener('click', nextSlide);
+    if (heroPrevBtn) heroPrevBtn.addEventListener('click', prevSlide);
+
     // --- Initial Content Load ---
 
     /**
@@ -655,10 +727,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (heroSection) {
             if (contentType !== 'home') {
                 heroSection.classList.add('hidden-hero');
+                clearInterval(heroInterval); // Clear hero interval when hero section is hidden
                 console.log('Hero section is being hidden for non-home page.');
             } else {
                 heroSection.classList.remove('hidden-hero');
-                fetchHeroMovie(); // Call the new single hero movie fetcher
+                // startHeroCarousel() will be called after fetchHeroMovies resolves
                 console.log('Hero section is being shown for home page.');
             }
         }
@@ -667,7 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (contentType === 'home') {
                 // Collect all promises for home page sections
                 const homeSectionPromises = [
-                    // fetchHeroMovie() is called separately above to ensure it runs first for hero visibility
+                    fetchHeroMovies(), // This will now fetch multiple and handle carousel
                     fetchAndDisplaySection('Most Popular Movies', `${API_BASE_URL}/movies/popular`),
                     fetchAndDisplaySection('Best Series', `${API_BASE_URL}/series/best`),
                     fetchAndDisplaySection('Most Popular Series', `${API_BASE_URL}/series/popular`),
