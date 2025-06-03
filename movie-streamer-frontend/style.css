@@ -609,7 +609,7 @@ body {
 
     .detail-overlay-content > div:first-child { /* Target the image container */
         width: 100%; /* Image takes full width */
-        height: 30vh; /* Control image height to not dominate screen */
+        height: 25vh; /* Reduced image height to give more space for text */
         position: relative; /* For gradient overlay */
         overflow: hidden; /* Hide overflow for image */
         border-radius: 0.75rem 0.75rem 0 0; /* Rounded top corners */
@@ -657,14 +657,19 @@ body {
     }
 
     .detail-overlay-content .flex.space-x-4.mb-6 { /* Play & Add to List buttons */
-        flex-direction: column; /* Stack buttons vertically */
-        align-items: stretch; /* Stretch buttons to full width */
-        gap: 0.75rem; /* Space between stacked buttons */
+        flex-direction: row; /* Changed to row for side-by-side */
+        justify-content: center; /* Center buttons horizontally */
+        flex-wrap: wrap; /* Allow buttons to wrap if screen is too small */
+        gap: 0.75rem; /* Space between buttons */
     }
 
     .detail-overlay-content .flex.space-x-4.mb-6 button {
-        width: 100%; /* Full width buttons */
-        justify-content: center; /* Center text/icon */
+        flex-grow: 1; /* Allow buttons to grow and fill space */
+        min-width: 120px; /* Minimum width for buttons to prevent them from becoming too small */
+        max-width: 48%; /* Max width to allow two buttons side-by-side with gap */
+        justify-content: center; /* Center text/icon within button */
+        padding: 0.75rem 1rem; /* Adjust padding for better look */
+        font-size: 0.9rem; /* Adjust font size */
     }
 
     /* Adjust font sizes for better mobile readability */
