@@ -9,25 +9,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Base URL for your backend API
     const API_BASE_URL = 'https://netflix-ydfu.onrender.com/api'; // *** Ensure this is your Render backend URL ***
-    // OMDb API Key for fetching hero section details directly (not used in this version as backend fetches details)
-    const OMDB_API_KEY = '48bff862'; // Kept for reference, but backend handles OMDb calls now
+    // OMDb API Key is not directly used in frontend as backend handles OMDb calls now
+    const OMDB_API_KEY = 'YOUR_OMDB_API_KEY'; // Kept for reference, but backend handles OMDb calls now
 
     // --- DOM Element References ---
     const movieSectionsContainer = document.getElementById('movie-sections');
     const loadingIndicator = document.getElementById('loading-indicator');
     const userDetailsSpan = document.querySelector('#user-details span');
-    const userProfileImg = document.querySelector('#user-details img');
     const header = document.getElementById('main-header');
 
     // Select all nav links (both desktop and new mobile bottom nav)
     const navLinks = document.querySelectorAll('.nav-link');
 
-    // Search Elements (now unified for desktop and mobile)
+    // Search Elements
     const searchToggleBtn = document.getElementById('search-toggle-btn');
-    const desktopSearchInputWrapper = document.getElementById('search-input-wrapper'); // Renamed for clarity
-    const desktopSearchInput = document.getElementById('search-input'); // Renamed for clarity
+    const desktopSearchInputWrapper = document.getElementById('search-input-wrapper');
+    const desktopSearchInput = document.getElementById('desktop-search-input'); // Renamed ID in HTML
 
-    // New Mobile Search Overlay Elements
+    // Mobile Search Overlay Elements
     const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
     const mobileSearchInput = document.getElementById('mobile-search-input');
     const closeSearchBtn = document.getElementById('close-search-btn');
@@ -58,9 +57,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         console.log('Existing user ID:', userId);
     }
-    // REMOVED: Display user ID. User requested to remove this.
+    // Always display "Guest" for the user name
     if (userDetailsSpan) {
-        userDetailsSpan.textContent = `Guest`; // Always display "Guest"
+        userDetailsSpan.textContent = `Guest`;
     }
 
 
@@ -84,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingIndicator.style.opacity = '0';
             setTimeout(() => {
                 loadingIndicator.classList.add('hidden');
-            }, 300); // Matches CSS transition
+            }, 300); // Matches CSS transition duration
         }
     };
 
@@ -97,13 +96,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const showMessageBox = (message, type = 'info', duration = 3000) => {
         let messageBox = document.getElementById('message-box');
         if (!messageBox) {
-             // Create it if it doesn't exist (e.g., if it was removed after a previous message)
+             // Create it if it doesn't exist
             messageBox = document.createElement('div');
             messageBox.id = 'message-box';
             document.body.appendChild(messageBox);
         }
 
         messageBox.textContent = message;
+        // Reset classes to ensure only one type class is applied
         messageBox.className = `fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-semibold text-center z-[9999] opacity-0 transition-opacity duration-300`;
 
         if (type === 'success') {
@@ -438,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No trending movies found from backend. Hiding hero.");
                 if (heroSection) { // Check if heroSection exists before manipulating
                     heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies found for hero section.</p>';
-                    heroSection.classList.add('hidden-hero'); // Hide if no data
+                    heroSection.classList.add('hidden-hero'); // Hide if error
                 }
             }
         } catch (error) {
@@ -611,7 +611,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Search toggle and input functionality (unified for all screen sizes)
+    // Search toggle button functionality
     if (searchToggleBtn) {
         searchToggleBtn.addEventListener('click', () => {
             // Check if it's a mobile view (using a breakpoint, e.g., 768px as defined in CSS)
@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listener for desktop search input (original #search-input)
+    // Event listener for desktop search input
     if (desktopSearchInput) {
         desktopSearchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
@@ -649,12 +649,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Event listener for mobile search input (#mobile-search-input)
+    // Event listener for mobile search input
     if (mobileSearchInput) {
         mobileSearchInput.addEventListener('keypress', async (e) => {
             if (e.key === 'Enter') {
                 console.log("Mobile Search input: Enter pressed. Query:", mobileSearchInput.value.trim());
-                await handleSearch(mobileSearchInput.value.trim(), mobileSearchResultsContainer); // Pass mobile results container
+                // Display results within the mobile search overlay itself
+                await handleSearch(mobileSearchInput.value.trim(), mobileSearchResultsContainer);
             }
         });
     }
@@ -718,10 +719,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error('Search error:', error);
             } finally {
                 hideLoading(); // Ensure loading indicator is hidden after search
-                // For mobile, close the overlay after search
-                if (window.innerWidth < 768) {
-                    mobileSearchOverlay.classList.remove('active');
-                    document.body.classList.remove('overflow-hidden'); // Re-enable body scroll
+                // For mobile, if search results are displayed in the overlay, keep overlay open.
+                // If search results are displayed in the main content area (desktop), close the desktop input.
+                if (targetContainer === movieSectionsContainer && window.innerWidth >= 768) {
+                    desktopSearchInputWrapper.classList.add('hidden');
                 }
             }
         } else {

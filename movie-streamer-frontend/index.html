@@ -18,6 +18,7 @@
         }
 
         /* Custom scrollbar-hide for horizontal sections (Netflix style) */
+        /* Hides scrollbar but keeps scrolling functionality */
         .scrollbar-hide::-webkit-scrollbar {
             display: none;
         }
@@ -59,7 +60,6 @@
             margin-top: 0;
             pointer-events: none; /* Disable interactions when hidden */
         }
-
 
         .hero-slides-container {
             display: flex;
@@ -299,7 +299,7 @@
             color: #ffffff; /* Brighter on hover/active */
         }
 
-        /* Mobile Search Overlay */
+        /* Mobile Search Overlay (Full Screen) */
         #mobile-search-overlay {
             position: fixed;
             top: 0;
@@ -331,7 +331,7 @@
             margin-bottom: 1rem;
         }
 
-        #mobile-search-overlay #search-input {
+        #mobile-search-overlay #mobile-search-input { /* Specific ID for mobile search input */
             flex-grow: 1;
             background-color: #333;
             border: 1px solid #555;
@@ -343,7 +343,7 @@
             transition: border-color 0.3s;
         }
 
-        #mobile-search-overlay #search-input:focus {
+        #mobile-search-overlay #mobile-search-input:focus {
             border-color: #e50914; /* Netflix red on focus */
         }
 
@@ -371,6 +371,7 @@
         }
 
 
+        /* Media Queries */
         /* Mobile specific styles (max-width: 767px) */
         @media (max-width: 767px) {
             /* Adjust body padding to account for fixed bottom nav */
@@ -443,7 +444,7 @@
                     <i class="fas fa-search"></i>
                 </button>
                 <div id="search-input-wrapper" class="relative hidden flex-grow md:block">
-                    <input type="text" id="search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-full">
+                    <input type="text" id="desktop-search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-full">
                 </div>
             </div>
             <div id="user-details" class="flex items-center space-x-2">
@@ -483,15 +484,15 @@
             <li><a href="#" class="nav-link" data-content="movies"><i class="fas fa-film"></i>Movies</a></li>
             <li><a href="#" class="nav-link" data-content="series"><i class="fas fa-tv"></i>Series</a></li>
             <li><a href="#" class="nav-link" data-content="mylist"><i class="fas fa-heart"></i>My List</a></li>
-            </ul>
+        </ul>
     </nav>
 
-    <div id="mobile-search-overlay" class="hidden md:hidden">
-        <div class="search-header">
-            <input type="text" id="mobile-search-input" placeholder="Search for movies, series..." class="w-full">
-            <button id="close-search-btn" class="close-search-btn">&times;</button>
+    <div id="mobile-search-overlay" class="fixed inset-0 bg-black bg-opacity-95 z-50 flex-col items-center pt-8 hidden md:hidden">
+        <div class="search-header w-11/12 max-w-2xl flex items-center mb-4">
+            <input type="text" id="mobile-search-input" placeholder="Search for movies, series..." class="flex-grow bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-full text-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300">
+            <button id="close-search-btn" class="text-white text-3xl ml-4 cursor-pointer hover:text-gray-400 transition-colors">&times;</button>
         </div>
-        <div id="mobile-search-results-container" class="search-results-container">
+        <div id="mobile-search-results-container" class="w-11/12 max-w-2xl overflow-y-auto flex-grow pb-4">
             </div>
     </div>
 
