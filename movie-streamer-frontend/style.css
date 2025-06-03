@@ -172,8 +172,8 @@ body {
 }
 
 /* Ensure hero navigation buttons are visible for carousel */
-#hero-prev-btn { left: 1rem; display: flex; } /* Changed from none to flex */
-#hero-next-btn { right: 1rem; display: flex; } /* Changed from none to flex */
+#hero-prev-btn { left: 1rem; display: flex; }
+#hero-next-btn { right: 1rem; display: flex; }
 
 
 .hero-dots-container {
@@ -181,12 +181,12 @@ body {
     bottom: 1rem;
     left: 50%;
     transform: translateX(-50%);
-    display: flex; /* Changed from none to flex */
+    display: flex;
     gap: 0.5rem;
     z-index: 20;
 }
 
-.hero-dots-container div { /* Changed from span to div for consistency with script.js */
+.hero-dots-container div {
     height: 0.5rem;
     width: 0.5rem;
     background-color: rgba(255, 255, 255, 0.5);
@@ -195,24 +195,24 @@ body {
     transition: background-color 0.3s;
 }
 
-.hero-dots-container div.bg-white { /* Changed from span to div */
+.hero-dots-container div.bg-white {
     background-color: white;
 }
 
 
 /* Movie card specific styling for hover effects */
-.movie-card-container { /* Renamed from .movie-card for consistency */
+.movie-card-container {
     position: relative;
-    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Smooth transition for scale and shadow */
-    box-shadow: 0 0 0 rgba(0,0,0,0); /* Initial no shadow */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 0 0 rgba(0,0,0,0);
     cursor: pointer;
-    border-radius: 0.5rem; /* Apply rounded corners */
-    overflow: hidden; /* Ensures content respects border-radius */
+    border-radius: 0.5rem;
+    overflow: hidden;
 }
 .movie-card-container:hover {
-    transform: scale(1.08); /* Slightly more pronounced scale */
-    box-shadow: 0 8px 16px rgba(0,0,0,0.5); /* Add a subtle shadow on hover */
-    z-index: 20; /* Ensure hovered card is on top */
+    transform: scale(1.08);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+    z-index: 20;
 }
 
 /* Info overlay on movie card hover */
@@ -222,25 +222,25 @@ body {
     left: 0;
     right: 0;
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
-    padding: 0.75rem; /* Slightly more padding */
+    padding: 0.75rem;
     opacity: 0;
     transition: opacity 0.3s ease;
-    pointer-events: none; /* Allows clicks to pass through to the card */
+    pointer-events: none;
 }
 .movie-card-container:hover .movie-card-info {
     opacity: 1;
 }
 .movie-card-info h3 {
-    font-size: 0.875rem; /* text-sm */
-    font-weight: 600; /* font-semibold */
+    font-size: 0.875rem;
+    font-weight: 600;
     margin-bottom: 0.25rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 .movie-card-info p {
-    font-size: 0.75rem; /* text-xs */
-    color: #a0aec0; /* gray-400 */
+    font-size: 0.75rem;
+    color: #a0aec0;
 }
 
 
@@ -251,29 +251,29 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.95); /* Slightly darker overlay */
+    background-color: rgba(0, 0, 0, 0.95);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 100;
-    opacity: 0; /* Start hidden */
-    transition: opacity 0.3s ease; /* Fade in/out */
-    pointer-events: none; /* Disable clicks when not active */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
 }
 .detail-overlay.active {
-    opacity: 1; /* Show when active */
-    pointer-events: auto; /* Enable clicks when active */
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .detail-overlay-content {
-    background-color: #1a1a1a; /* Darker panel background */
-    border-radius: 0.5rem; /* Rounded corners */
-    box-shadow: 0 10px 20px rgba(0,0,0,0.7); /* Stronger shadow */
-    transform: translateY(20px); /* Slight animation on open */
+    background-color: #1a1a1a;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.7);
+    transform: translateY(20px);
     transition: transform 0.3s ease;
-    max-width: 90%; /* Max width for responsiveness */
-    max-height: 90vh; /* Max height for responsiveness */
-    overflow: hidden; /* Hide scrollbars if content overflows */
+    max-width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
 }
 .detail-overlay.active .detail-overlay-content {
     transform: translateY(0);
@@ -281,27 +281,27 @@ body {
 
 /* Close button for detail overlay - Positioning adjusted for mobile */
 .detail-overlay-content .close-overlay-btn {
-    background: #e50914; /* Netflix red */
+    background: #e50914;
     border: none;
     color: white;
     font-size: 2rem;
     cursor: pointer;
     position: absolute;
-    top: 0.75rem; /* Adjusted for better spacing */
-    right: 0.75rem; /* Adjusted for better spacing */
+    top: 0.75rem;
+    right: 0.75rem;
     z-index: 10;
     transition: background-color 0.2s ease;
-    padding: 0.5rem; /* Added padding for easier tap target */
-    border-radius: 50%; /* Make it circular */
-    width: 3rem; /* Fixed width */
-    height: 3rem; /* Fixed height */
-    display: flex; /* Center the X */
+    padding: 0.5rem;
+    border-radius: 50%;
+    width: 3rem;
+    height: 3rem;
+    display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .detail-overlay-content .close-overlay-btn:hover {
-    background-color: #c11119; /* Slightly darker red on hover */
+    background-color: #c11119;
 }
 
 /* Loading Indicator Styling */
@@ -311,22 +311,22 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent dark overlay */
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    z-index: 9999; /* Ensure it's on top */
+    z-index: 9999;
     color: #e5e5e5;
     font-size: 1.2rem;
     transition: opacity 0.3s ease;
 }
 #loading-indicator.hidden {
     opacity: 0;
-    pointer-events: none; /* Allow clicks through when hidden */
+    pointer-events: none;
 }
 #loading-indicator .fa-spinner {
-    color: #e50914; /* Netflix red */
+    color: #e50914;
 }
 
 /* Message Box Styling */
@@ -339,21 +339,21 @@ body {
 
 /* Mobile Bottom Nav Styling */
 #mobile-bottom-nav {
-    display: none; /* Hidden by default, shown via media query */
+    display: none;
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    background-color: #1a1a1a; /* Darker background than body */
+    background-color: #1a1a1a;
     border-top: 1px solid #333;
     padding: 10px 0;
-    height: 60px; /* Fixed height for the bottom nav */
+    height: 60px;
     z-index: 99;
     justify-content: space-around;
     align-items: center;
     box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
-    border-top-left-radius: 0.75rem; /* rounded-xl */
-    border-top-right-radius: 0.75rem; /* rounded-xl */
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0.75rem;
 }
 
 #mobile-bottom-nav ul {
@@ -372,24 +372,24 @@ body {
     align-items: center;
     color: #e5e5e5;
     text-decoration: none;
-    font-size: 0.7rem; /* Smaller text for mobile */
+    font-size: 0.7rem;
     font-weight: 500;
-    padding: 0.5rem 0.25rem; /* Adjusted padding */
+    padding: 0.5rem 0.25rem;
     transition: color 0.2s ease;
-    flex: 1; /* Distribute space evenly */
+    flex: 1;
     text-align: center;
-    border-radius: 0.5rem; /* rounded-md */
+    border-radius: 0.5rem;
 }
 
 #mobile-bottom-nav .nav-link i {
-    font-size: 1.2rem; /* Icon size */
+    font-size: 1.2rem;
     margin-bottom: 4px;
 }
 
 #mobile-bottom-nav .nav-link:hover,
 #mobile-bottom-nav .nav-link.active {
-    color: #ffffff; /* Brighter on hover/active */
-    background-color: rgba(255, 255, 255, 0.1); /* Subtle active background */
+    color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Mobile Search Overlay (Full Screen) */
@@ -399,13 +399,13 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.95); /* Darker, semi-transparent background */
-    z-index: 1000; /* Above everything else */
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start; /* Align to top for input */
-    padding-top: 2rem; /* Space from top */
+    justify-content: flex-start;
+    padding-top: 2rem;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s ease;
@@ -424,20 +424,20 @@ body {
     margin-bottom: 1rem;
 }
 
-#mobile-search-overlay #mobile-search-input { /* Specific ID for mobile search input */
+#mobile-search-overlay #mobile-search-input {
     flex-grow: 1;
     background-color: #333;
     border: 1px solid #555;
     color: white;
-    padding: 0.75rem 1rem; /* Larger padding */
+    padding: 0.75rem 1rem;
     border-radius: 0.5rem;
-    font-size: 1.2rem; /* Larger text */
+    font-size: 1.2rem;
     outline: none;
     transition: border-color 0.3s;
 }
 
 #mobile-search-overlay #mobile-search-input:focus {
-    border-color: #e50914; /* Netflix red on focus */
+    border-color: #e50914;
 }
 
 #mobile-search-overlay .close-search-btn {
@@ -459,7 +459,7 @@ body {
     width: 90%;
     max-width: 600px;
     overflow-y: auto;
-    flex-grow: 1; /* Take up remaining space */
+    flex-grow: 1;
     padding-bottom: 1rem;
 }
 
@@ -467,19 +467,19 @@ body {
 /* --- Video Player Overlay Styles --- */
 #video-player-overlay {
     transition: opacity 0.3s ease;
-    display: none; /* Hidden by default, shown by JS */
+    display: none;
 }
 
 #video-player-overlay.active {
     opacity: 1;
-    display: flex; /* Display flex when active */
+    display: flex;
 }
 
 #video-player-overlay .video-container {
     position: relative;
-    width: 90%; /* Max width for responsiveness */
-    max-width: 1200px; /* Max width for larger screens */
-    aspect-ratio: 16 / 9; /* Standard video aspect ratio */
+    width: 90%;
+    max-width: 1200px;
+    aspect-ratio: 16 / 9;
     background-color: #000;
     border-radius: 0.5rem;
     overflow: hidden;
@@ -491,7 +491,7 @@ body {
 #video-player-overlay #movie-player {
     width: 100%;
     height: 100%;
-    object-fit: contain; /* Ensure video fits within container without cropping */
+    object-fit: contain;
 }
 
 #video-player-overlay .close-video-btn {
@@ -525,12 +525,12 @@ body {
     padding: 1rem;
     opacity: 0;
     transition: opacity 0.3s ease;
-    pointer-events: none; /* Disable interaction when hidden */
+    pointer-events: none;
 }
 
 .player-controls.active {
     opacity: 1;
-    pointer-events: auto; /* Enable interaction when active */
+    pointer-events: auto;
 }
 
 .player-controls button {
@@ -547,35 +547,35 @@ body {
 }
 
 .progress-bar-container {
-    height: 0.4rem; /* Slightly thinner progress bar */
-    background-color: rgba(255, 255, 255, 0.3); /* Lighter background */
-    border-radius: 9999px; /* Fully rounded */
+    height: 0.4rem;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 9999px;
     cursor: pointer;
     position: relative;
-    margin-bottom: 0.75rem; /* Space below progress bar */
+    margin-bottom: 0.75rem;
 }
 
 .progress-bar-fill {
     height: 100%;
-    background-color: #e50914; /* Netflix red */
+    background-color: #e50914;
     border-radius: 9999px;
-    transition: width 0.1s linear; /* Smooth progress update */
+    transition: width 0.1s linear;
 }
 
 .progress-bar-handle {
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 1rem; /* Larger handle */
+    width: 1rem;
     height: 1rem;
     background-color: #e50914;
     border-radius: 50%;
-    opacity: 0; /* Hidden by default */
+    opacity: 0;
     transition: opacity 0.2s ease;
 }
 
 .progress-bar-container:hover .progress-bar-handle {
-    opacity: 1; /* Show handle on hover */
+    opacity: 1;
 }
 
 .controls-bottom-row {
@@ -585,7 +585,7 @@ body {
 }
 
 .volume-slider {
-    width: 80px; /* Adjust width for volume slider */
+    width: 80px;
     -webkit-appearance: none;
     background: transparent;
 }
@@ -600,24 +600,24 @@ body {
     width: 1rem;
     background: white;
     border-radius: 50%;
-    margin-top: -0.35rem; /* Adjust thumb vertical position */
+    margin-top: -0.35rem;
 }
 
 /* Dropdown menus for audio/subtitles */
 .player-controls .relative.group button {
-    padding: 0.5rem; /* Ensure consistent padding for dropdown buttons */
+    padding: 0.5rem;
 }
 
 #audio-track-options,
 #subtitle-options {
-    background-color: rgba(0, 0, 0, 0.8); /* Darker background for dropdown */
+    background-color: rgba(0, 0, 0, 0.8);
     padding: 0.5rem;
     border-radius: 0.5rem;
-    min-width: 120px; /* Ensure minimum width */
-    max-height: 150px; /* Max height for scroll if many options */
+    min-width: 120px;
+    max-height: 150px;
     overflow-y: auto;
     box-shadow: 0 4px 8px rgba(0,0,0,0.5);
-    z-index: 20; /* Ensure dropdown is above other controls */
+    z-index: 20;
 }
 
 #audio-track-options div,
@@ -630,42 +630,42 @@ body {
 
 #audio-track-options div.bg-red-600,
 #subtitle-options div.bg-red-600 {
-    background-color: #e50914; /* Netflix red for active item */
+    background-color: #e50914;
 }
 
 
 /* --- Consolidated Category Grid (for Movies, TV Shows pages) --- */
 .movie-grid-category {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); /* Smaller cards for mobile grid */
-    gap: 0.5rem; /* Reduced gap for mobile grid */
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 0.5rem;
 }
 
 @media (min-width: 480px) {
     .movie-grid-category {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 0.75rem; /* Reduced gap */
+        gap: 0.75rem;
     }
 }
 
 @media (min-width: 640px) { /* sm breakpoint */
     .movie-grid-category {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 1rem; /* Reduced gap */
+        gap: 1rem;
     }
 }
 
 @media (min-width: 768px) { /* md breakpoint */
     .movie-grid-category {
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: 1.25rem; /* Increased gap for desktop */
+        gap: 1.25rem;
     }
 }
 
 @media (min-width: 1024px) { /* lg breakpoint */
     .movie-grid-category {
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 1.5rem; /* Further increased gap */
+        gap: 1.5rem;
     }
 }
 
@@ -675,16 +675,16 @@ body {
 @media (max-width: 767px) {
     /* Adjust body padding to account for fixed bottom nav */
     body {
-        padding-bottom: 70px; /* Height of the bottom nav + some margin */
+        padding-bottom: 70px;
     }
 
     /* Ensure top header and search are visible on mobile */
     #main-header {
-        padding: 1rem; /* Adjust padding for mobile header */
-        background-color: #141414; /* Always solid background on mobile */
+        padding: 1rem;
+        background-color: #141414;
     }
-    #main-header nav { /* Desktop nav */
-        display: none; /* Keep desktop nav hidden on mobile */
+    #main-header nav {
+        display: none;
     }
     /* Search toggle button is always visible */
     #main-header #search-toggle-btn {
@@ -697,32 +697,32 @@ body {
 
     /* Show mobile bottom navigation */
     #mobile-bottom-nav {
-        display: flex !important; /* CRITICAL: Ensure it's always flex on mobile */
+        display: flex !important;
     }
 
     /* --- Mobile Detail Overlay Specific Styles --- */
     .detail-overlay-content {
-        flex-direction: column; /* Stack image and details vertically */
-        max-width: 95%; /* Slightly wider on mobile */
-        max-height: 95vh; /* Allow more height on small screens */
-        overflow-y: auto; /* Ensure content is scrollable */
-        border-radius: 0.75rem; /* More rounded corners for mobile */
+        flex-direction: column;
+        max-width: 95%;
+        max-height: 95vh;
+        overflow-y: auto;
+        border-radius: 0.75rem;
     }
 
-    .detail-overlay-content > div:first-child { /* Target the image container */
-        width: 100%; /* Image takes full width */
-        height: 25vh; /* Reduced image height to give more space for text */
-        position: relative; /* For gradient overlay */
-        overflow: hidden; /* Hide overflow for image */
-        border-radius: 0.75rem 0.75rem 0 0; /* Rounded top corners */
+    .detail-overlay-content > div:first-child {
+        width: 100%;
+        height: 25vh;
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.75rem 0.75rem 0 0;
     }
 
     .detail-overlay-content > div:first-child img {
         width: 100%;
         height: 100%;
-        object-fit: cover; /* Ensure image covers the area */
-        object-position: top; /* CRITICAL: Crop image from the top */
-        border-radius: 0.75rem 0.75rem 0 0; /* Rounded top corners */
+        object-fit: cover;
+        object-position: top;
+        border-radius: 0.75rem 0.75rem 0 0;
     }
 
     /* Add a gradient overlay to the image on mobile for better text blending */
@@ -732,85 +732,85 @@ body {
         bottom: 0;
         left: 0;
         right: 0;
-        height: 50%; /* Gradient covers bottom half of image */
+        height: 50%;
         background: linear-gradient(to top, #1a1a1a 0%, rgba(26, 26, 26, 0) 100%);
-        pointer-events: none; /* Allow clicks to pass through */
+        pointer-events: none;
     }
 
 
-    .detail-overlay-content > div:last-child { /* Target the text details container */
-        width: 100%; /* Details take full width */
-        padding: 1.5rem; /* Adjusted padding for mobile */
-        padding-top: 0; /* No top padding, as image has gradient */
-        overflow-y: visible; /* Let its own content scroll if necessary */
-        max-height: none; /* Remove max-height from parent to allow scrolling within this div */
+    .detail-overlay-content > div:last-child {
+        width: 100%;
+        padding: 1.5rem;
+        padding-top: 0;
+        overflow-y: visible;
+        max-height: none;
     }
 
     .detail-overlay-content .close-overlay-btn {
-        top: 0.75rem; /* Slightly more space from top */
-        right: 0.75rem; /* Slightly more space from right */
-        font-size: 2.5rem; /* Larger for easier tap */
-        background: #e50914; /* Netflix red */
+        top: 0.75rem;
+        right: 0.75rem;
+        font-size: 2.5rem;
+        background: #e50914;
         border-radius: 50%;
         width: 3rem;
         height: 3rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white; /* Ensure X is white */
+        color: white;
     }
 
-    .detail-overlay-content .flex.space-x-4.mb-6 { /* Play & Add to List buttons */
-        flex-direction: column; /* Stack buttons vertically */
-        align-items: stretch; /* Stretch buttons to full width */
-        gap: 0.75rem; /* Space between stacked buttons */
+    .detail-overlay-content .flex.space-x-4.mb-6 {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
     }
 
     .detail-overlay-content .flex.space-x-4.mb-6 button {
-        width: 100%; /* Full width buttons */
-        justify-content: center; /* Center text/icon */
-        padding: 0.75rem 1.5rem; /* Adjust padding for better look */
-        font-size: 1rem; /* Adjust font size */
-        border-radius: 0.25rem; /* Slightly less rounded */
+        width: 100%;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 0.25rem;
     }
 
     /* Specific button styling for Netflix look */
     .detail-overlay-content .play-btn {
         background-color: white;
         color: black;
-        font-weight: 600; /* Make play button text bold */
+        font-weight: 600;
     }
 
     .detail-overlay-content .add-to-list-btn {
-        background-color: rgba(109, 109, 110, 0.7); /* Netflix grey */
+        background-color: rgba(109, 109, 110, 0.7);
         color: white;
     }
 
 
     /* Adjust font sizes for better mobile readability */
     .detail-overlay-content h2 {
-        font-size: 2.2rem; /* Slightly smaller main title */
+        font-size: 2.2rem;
     }
     .detail-overlay-content p {
-        font-size: 0.9rem; /* Smaller paragraph text */
+        font-size: 0.9rem;
     }
     .detail-overlay-content .grid {
-        font-size: 0.85rem; /* Smaller grid details */
+        font-size: 0.85rem;
         /* Adjusting grid for metadata to be more linear */
-        grid-template-columns: 1fr; /* Single column for grid items */
-        gap: 0.25rem; /* Smaller gap between metadata lines */
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
     }
     /* Ensure metadata items flow linearly */
     .detail-overlay-content .grid p {
-        display: block; /* Ensure each p takes full width */
+        display: block;
     }
 
 
     /* Video Player Overlay adjustments for mobile */
     #video-player-overlay .video-container {
-        width: 95%; /* Slightly wider on mobile */
-        height: auto; /* Auto height to maintain aspect ratio */
-        max-height: 80vh; /* Prevent it from taking full screen height */
+        width: 95%;
+        height: auto;
+        max-height: 80vh;
     }
     #video-player-overlay .close-video-btn {
         font-size: 2rem;
@@ -820,22 +820,22 @@ body {
         right: 0.5rem;
     }
     .player-controls {
-        padding: 0.75rem; /* Smaller padding for controls */
+        padding: 0.75rem;
     }
     .controls-bottom-row {
-        flex-direction: column; /* Stack controls vertically on mobile */
-        align-items: flex-start; /* Align to left */
+        flex-direction: column;
+        align-items: flex-start;
         gap: 0.5rem;
     }
     .controls-bottom-row > div {
-        width: 100%; /* Make control groups take full width */
-        justify-content: space-between; /* Distribute items */
+        width: 100%;
+        justify-content: space-between;
     }
     .controls-bottom-row .flex.items-center.gap-2 { /* Right side controls */
-        justify-content: flex-end; /* Align to right */
+        justify-content: flex-end;
     }
     .volume-slider {
-        width: 60px; /* Adjust volume slider width for mobile */
+        width: 60px;
     }
 }
 
@@ -862,24 +862,24 @@ body {
 
     /* Desktop Detail Overlay Specific Styles */
     .detail-overlay-content {
-        flex-direction: row; /* Side-by-side on desktop */
-        max-width: 75%; /* Wider on desktop */
+        flex-direction: row;
+        max-width: 75%;
         max-height: 90vh;
-        overflow: hidden; /* Parent overflow hidden */
+        overflow: hidden;
     }
 
-    .detail-overlay-content > div:first-child { /* Image container */
-        width: 33.333%; /* 1/3 width */
-        height: auto; /* Auto height */
+    .detail-overlay-content > div:first-child {
+        width: 33.333%;
+        height: auto;
         position: relative;
-        border-radius: 0.5rem 0 0 0.5rem; /* Rounded left corners */
+        border-radius: 0.5rem 0 0 0.5rem;
     }
 
     .detail-overlay-content > div:first-child img {
         height: 100%;
         width: 100%;
         object-fit: cover;
-        border-radius: 0.5rem 0 0 0.5rem; /* Rounded left corners */
+        border-radius: 0.5rem 0 0 0.5rem;
     }
 
     /* Remove gradient overlay on desktop image */
@@ -887,21 +887,21 @@ body {
         content: none;
     }
 
-    .detail-overlay-content > div:last-child { /* Text details container */
-        width: 66.666%; /* 2/3 width */
-        padding: 2rem; /* Standard padding */
-        overflow-y: auto; /* Enable scrolling for details */
-        max-height: 90vh; /* Match parent height */
+    .detail-overlay-content > div:last-child {
+        width: 66.666%;
+        padding: 2rem;
+        overflow-y: auto;
+        max-height: 90vh;
     }
 
-    .detail-overlay-content .flex.space-x-4.mb-6 { /* Play & Add to List buttons */
-        flex-direction: row; /* Side-by-side on desktop */
+    .detail-overlay-content .flex.space-x-4.mb-6 {
+        flex-direction: row;
         align-items: center;
         gap: 1rem;
     }
 
     .detail-overlay-content .flex.space-x-4.mb-6 button {
-        width: auto; /* Auto width buttons */
+        width: auto;
     }
 
     /* Reset font sizes for desktop */
@@ -932,7 +932,7 @@ body {
         padding: 1rem;
     }
     .controls-bottom-row {
-        flex-direction: row; /* Side-by-side on desktop */
+        flex-direction: row;
         align-items: center;
     }
     .controls-bottom-row > div {
