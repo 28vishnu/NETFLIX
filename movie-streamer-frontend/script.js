@@ -1,1109 +1,816 @@
-// Filename: script.js
-// This script handles all frontend interactions, dynamic content loading,
-// and communication with the backend API, with performance optimizations.
+// script.js - Complete Netflix Clone Logic
 
-console.log("script.js loaded successfully!");
+// --- Configuration ---
+const BASE_BACKEND_URL = 'https://netflix-ydfu.onrender.com'; // Your Render backend URL
+const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/'; // Base URL for TMDB images
 
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOMContentLoaded event fired!");
+// --- DOM Elements ---
+const appContainer = document.getElementById('app-container');
+const mainHeader = document.getElementById('main-header');
+const mainNav = document.getElementById('main-nav');
+const menuToggle = document.getElementById('menu-toggle');
+const toggleSearchBtn = document.getElementById('toggle-search');
+const searchBar = document.getElementById('search-bar');
+const searchInput = document.getElementById('search-input');
+const mainContent = document.getElementById('main-content');
 
-    // Base URL for your backend API
-    const API_BASE_URL = 'https://netflix-ydfu.onrender.com/api'; // *** Ensure this is your Render backend URL ***
+// Pages
+const homePage = document.getElementById('home-page');
+const moviesPage = document.getElementById('movies-page');
+const seriesPage = document.getElementById('series-page');
+const myListPage = document.getElementById('my-list-page');
+const policiesPage = document.getElementById('policies-page');
+const searchResultsPage = document.getElementById('search-results-page');
 
-    // --- DOM Element References ---
-    const movieSectionsContainer = document.getElementById('movie-sections');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const userDetailsSpan = document.querySelector('#user-details span');
-    const header = document.getElementById('main-header');
-    const navLinks = document.querySelectorAll('.nav-link');
-    const searchToggleBtn = document.getElementById('search-toggle-btn');
-    const searchInputWrapper = document.getElementById('search-input-wrapper');
-    const searchInput = document.getElementById('search-input');
-    const heroSection = document.getElementById('hero-section');
-    const heroSlidesContainer = document.getElementById('hero-slides-container');
-    const heroPrevBtn = document.getElementById('hero-prev-btn');
-    const heroNextBtn = document.getElementById('hero-next-btn');
-    const heroDotsContainer = document.getElementById('hero-dots-container');
-    const detailOverlayContainer = document.getElementById('detail-overlay');
-    const videoPlayerOverlay = document.getElementById('video-player-overlay');
-    const moviePlayer = document.getElementById('movie-player');
-    const closePlayerBtn = document.getElementById('close-player-btn');
-    const bufferingSpinner = document.getElementById('buffering-spinner');
-    const mobileSearchOverlay = document.getElementById('mobile-search-overlay'); // New: mobile search overlay
-    const mobileSearchInput = document.getElementById('mobile-search-input'); // New: mobile search input
-    const mobileSearchResultsGrid = document.getElementById('mobile-search-results-grid'); // New: mobile search results grid
-    const mobileSearchNoResults = document.getElementById('mobile-search-no-results'); // New: mobile search no results message
+// Hero Section Elements
+const heroSection = document.getElementById('hero-section');
+const heroTitle = document.getElementById('hero-title');
+const heroPlot = document.getElementById('hero-plot');
+const heroPlayButton = document.getElementById('hero-play-button');
+const heroInfoButton = document.getElementById('hero-info-button');
 
-    // --- Global Variables ---
-    let currentHeroSlide = 0;
-    let heroInterval;
-    let lastScrollY = 0;
-    let userId = localStorage.getItem('netflixCloneUserId');
-    let heroMoviesData = [];
-    let searchTimeout; // For debouncing search input
-    let userMyList = []; // Array to hold user's My List items for quick lookups
+// Content Row Containers
+const contentRowsContainer = document.getElementById('content-rows-container');
+const popularMoviesRow = document.getElementById('popular-movies-row');
+const bestSeriesRow = document.getElementById('best-series-row');
 
-    // Generate a unique user ID if one doesn't exist (for My List persistence)
-    if (!userId) {
-        userId = crypto.randomUUID();
-        localStorage.setItem('netflixCloneUserId', userId);
-        console.log('Generated new user ID:', userId);
+// Search Results Elements
+const searchResultsGrid = document.getElementById('search-results-grid');
+const searchQueryDisplay = document.getElementById('search-query-display');
+
+// My List Elements
+const myListGrid = document.getElementById('my-list-grid');
+const currentUserIdSpan = document.getElementById('current-user-id');
+
+// Description Overlay Elements
+const descriptionOverlay = document.getElementById('description-overlay');
+const modalCloseButton = document.getElementById('modal-close-button');
+const modalBackdrop = document.getElementById('modal-backdrop');
+const modalTitle = document.getElementById('modal-title');
+const modalMatchScore = document.getElementById('modal-match-score');
+const modalReleaseYear = document.getElementById('modal-release-year');
+const modalRuntimeOrSeasons = document.getElementById('modal-runtime-or-seasons');
+const modalPlot = document.getElementById('modal-plot');
+const modalGenres = document.getElementById('modal-genres');
+const modalDirectorLine = document.getElementById('modal-director-line');
+const modalDirector = document.getElementById('modal-director');
+const modalActorsLine = document.getElementById('modal-actors-line');
+const modalActors = document.getElementById('modal-actors');
+const modalPlayButton = document.getElementById('modal-play-button');
+const modalMyListButton = document.getElementById('modal-my-list-button');
+const addIcon = modalMyListButton.querySelector('.add-icon');
+const checkIcon = modalMyListButton.querySelector('.check-icon');
+
+// Series Specific Modal Elements
+const modalSeriesSection = document.getElementById('modal-series-section');
+const seasonSelect = document.getElementById('season-select');
+const episodeList = document.getElementById('episode-list');
+
+// Loading Spinner
+const spinnerOverlay = document.getElementById('spinner-overlay');
+
+// --- Global State ---
+let currentPage = 'home';
+let currentUserId = localStorage.getItem('netflixCloneUserId') || generateUserId();
+let myListArr = [];
+let currentDetailedItem = null; // Stores the currently displayed item in the modal
+let currentHeroContent = null; // Stores the currently displayed item in the hero banner
+
+// --- Utility Functions ---
+
+/**
+ * Generates a unique user ID using Web Crypto API.
+ * Stores it in localStorage for persistence.
+ * @returns {string} The generated user ID.
+ */
+function generateUserId() {
+    const id = 'user_' + crypto.randomUUID();
+    localStorage.setItem('netflixCloneUserId', id);
+    return id;
+}
+
+/**
+ * Displays the loading spinner.
+ */
+function showSpinner() {
+    spinnerOverlay.classList.add('active');
+}
+
+/**
+ * Hides the loading spinner.
+ */
+function hideSpinner() {
+    spinnerOverlay.classList.remove('active');
+}
+
+/**
+ * Handles API requests to the backend.
+ * @param {string} endpoint - The API endpoint (e.g., '/api/movies/trending').
+ * @param {string} method - HTTP method (GET, POST, PUT, DELETE).
+ * @param {object} [body=null] - Request body for POST/PUT.
+ * @returns {Promise<object>} JSON response from the API.
+ * @throws {Error} If the API request fails.
+ */
+async function apiRequest(endpoint, method = 'GET', body = null) {
+    showSpinner();
+    try {
+        const options = { method };
+        if (body) {
+            options.headers = { 'Content-Type': 'application/json' };
+            options.body = JSON.stringify(body);
+        }
+        const response = await fetch(`${BASE_BACKEND_URL}${endpoint}`, options);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+            throw new Error(`API Error: ${response.status} ${response.statusText} - ${errorData.message || 'Server error'}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('API Request Failed:', error);
+        throw error; // Re-throw to allow calling functions to handle
+    } finally {
+        hideSpinner();
+    }
+}
+
+/**
+ * Hides all content pages.
+ */
+function hideAllPages() {
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active-page');
+        page.classList.add('hidden');
+    });
+}
+
+/**
+ * Navigates to a specific page.
+ * @param {string} pageId - The ID of the page to show (e.g., 'home-page', 'movies-page').
+ * @param {boolean} [pushState=true] - Whether to add to browser history.
+ */
+async function navigateTo(pageId, pushState = true) {
+    hideAllPages();
+    const targetPage = document.getElementById(pageId);
+    if (targetPage) {
+        targetPage.classList.remove('hidden');
+        targetPage.classList.add('active-page');
+        currentPage = pageId.replace('-page', ''); // Update current page state
+
+        // Update URL for navigation and history
+        if (pushState) {
+            history.pushState({ page: pageId }, '', `#${currentPage}`);
+        }
+
+        // Load content specific to the page
+        switch (pageId) {
+            case 'home-page':
+                await loadHeroContent();
+                await loadHomeContentRows();
+                break;
+            case 'movies-page':
+                await loadAllContent('movie', 'all-movies-grid');
+                break;
+            case 'series-page':
+                await loadAllContent('series', 'all-series-grid');
+                break;
+            case 'my-list-page':
+                await loadMyList();
+                break;
+            case 'search-results-page':
+                // Content loaded via search logic
+                break;
+            case 'policies-page':
+                // Static content, no loading needed
+                break;
+        }
+        // Scroll to top when navigating to a new page
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-        console.log('Existing user ID:', userId);
+        console.warn(`Page with ID ${pageId} not found.`);
+        navigateTo('home-page'); // Fallback to home
     }
-    if (userDetailsSpan) {
-        userDetailsSpan.textContent = `Guest`;
-    }
+}
 
-    // --- Intersection Observer for Lazy Loading Images ---
-    // Options for the Intersection Observer
-    const lazyLoadOptions = {
-        root: null, // viewport
-        rootMargin: '200px', // start loading images 200px before they enter the viewport
-        threshold: 0.1 // 10% of the image needs to be visible
-    };
+/**
+ * Creates a content card HTML element.
+ * @param {object} item - The movie or series data.
+ * @returns {HTMLElement} The created card element.
+ */
+function createContentCard(item) {
+    const card = document.createElement('div');
+    card.classList.add('content-card');
+    card.dataset.imdbId = item.imdbID;
+    card.dataset.tmdbId = item.tmdbId; // Store TMDB ID as well
+    card.dataset.type = item.type; // 'movie' or 'series'
 
-    // Callback function for the Intersection Observer
-    const lazyLoadCallback = (entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const img = entry.target;
-                const src = img.dataset.src; // Get the actual image source from data-src
-                if (src) {
-                    img.src = src; // Set the src to load the image
-                    img.onload = () => {
-                        console.log(`Image loaded: ${src}`);
-                    };
-                    img.onerror = () => {
-                        console.error(`Error loading lazy image: ${src}`);
-                        img.src = 'https://placehold.co/300x450/000000/FFFFFF?text=Image+Error'; // Fallback
-                    };
-                }
-                observer.unobserve(img); // Stop observing once the image is loaded
-            }
-        });
-    };
+    // Use poster_path if available, otherwise backdrop_path, or a placeholder
+    const imageUrl = item.poster || item.backdrop || 'https://placehold.co/250x140/333333/FFFFFF?text=No+Image';
+    card.innerHTML = `
+        <img src="${imageUrl}" alt="${item.title || item.name}" onerror="this.onerror=null;this.src='https://placehold.co/250x140/333333/FFFFFF?text=No+Image';" loading="lazy">
+        <div class="card-title">${item.title || item.name}</div>
+    `;
+    card.addEventListener('click', () => showDetailsOverlay(item.imdbID || item.tmdbId, item.type));
+    return card;
+}
 
-    // Create a new Intersection Observer instance
-    const lazyLoadObserver = new IntersectionObserver(lazyLoadCallback, lazyLoadOptions);
+/**
+ * Populates a content row or grid with cards.
+ * @param {HTMLElement} container - The HTML element to append cards to.
+ * @param {Array<object>} items - An array of movie or series data.
+ * @param {boolean} [isGrid=false] - If true, treats container as a grid, removes message.
+ */
+function populateContent(container, items, isGrid = false) {
+    container.innerHTML = ''; // Clear previous content
 
-    // --- Utility Functions ---
-
-    /**
-     * Displays a loading indicator.
-     */
-    const showLoading = () => {
-        if (loadingIndicator) {
-            loadingIndicator.classList.remove('hidden');
-            loadingIndicator.style.opacity = '1';
-        }
-    };
-
-    /**
-     * Hides the loading indicator.
-     */
-    const hideLoading = () => {
-        if (loadingIndicator) {
-            loadingIndicator.style.opacity = '0';
-            setTimeout(() => {
-                loadingIndicator.classList.add('hidden');
-            }, 300); // Matches CSS transition
-        }
-    };
-
-    /**
-     * Displays a temporary message to the user.
-     * @param {string} message - The message to display.
-     * @param {string} type - 'success', 'error', or 'info'.
-     * @param {number} duration - How long to display the message in milliseconds.
-     */
-    const showMessageBox = (message, type = 'info', duration = 3000) => {
-        let messageBox = document.getElementById('message-box');
-        if (!messageBox) {
-            messageBox = document.createElement('div');
-            messageBox.id = 'message-box';
-            document.body.appendChild(messageBox);
-        }
-
-        messageBox.textContent = message;
-        messageBox.className = `fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-semibold text-center z-[9999] opacity-0 transition-opacity duration-300`;
-
-        if (type === 'success') {
-            messageBox.classList.add('bg-green-600');
-        } else if (type === 'error') {
-            messageBox.classList.add('bg-red-600');
-        } else {
-            messageBox.classList.add('bg-blue-600');
-        }
-
-        messageBox.style.opacity = '1';
-
-        setTimeout(() => {
-            messageBox.style.opacity = '0';
-            messageBox.addEventListener('transitionend', () => {
-                if (messageBox.parentNode) {
-                    messageBox.parentNode.removeChild(messageBox);
-                }
-            }, { once: true });
-        }, duration);
-    };
-
-    /**
-     * Fetches data from a given URL.
-     * @param {string} url - The URL to fetch from.
-     * @returns {Promise<Object>} - A promise that resolves to the JSON data.
-     */
-    async function fetchData(url) {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
-                console.error(`HTTP error! Status: ${response.status}, URL: ${url}, Message: ${errorData.error || errorData.message || response.statusText}`);
-                throw new Error(`Failed to fetch data from ${url}: ${errorData.error || errorData.message || response.statusText}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Fetch error:', error);
-            throw error;
-        }
+    const noContentMessage = container.querySelector('.no-content-message');
+    if (noContentMessage) {
+        noContentMessage.classList.add('hidden');
     }
 
-    /**
-     * Validates if a poster URL is likely usable.
-     * @param {string} url - The poster URL string.
-     * @returns {boolean} True if the URL seems valid, false otherwise.
-     */
-    const isValidPosterUrl = (url) => {
-        if (!url || typeof url !== 'string') {
-            return false;
-        }
-        const trimmedUrl = url.trim();
-        return trimmedUrl !== '' &&
-               trimmedUrl.toLowerCase() !== 'n/a' &&
-               trimmedUrl.toLowerCase() !== 'null' &&
-               trimmedUrl.toLowerCase() !== 'undefined' &&
-               trimmedUrl.length > 10;
-    };
-
-    /**
-     * Checks if an item is in the user's My List.
-     * @param {string} imdbId - The IMDb ID of the item.
-     * @returns {boolean} True if the item is in My List, false otherwise.
-     */
-    const isItemInMyList = (imdbId) => {
-        return userMyList.some(item => item.imdbID === imdbId);
-    };
-
-    /**
-     * Fetches and updates the user's My List.
-     */
-    const fetchMyListStatus = async () => {
-        try {
-            const response = await fetchData(`${API_BASE_URL}/mylist/${userId}`);
-            userMyList = response.items || [];
-            console.log('My List status updated:', userMyList);
-        } catch (error) {
-            console.error('Error fetching My List status:', error);
-            userMyList = []; // Reset to empty on error
-        }
-    };
-
-
-    /**
-     * Creates a movie/series card element.
-     * Includes play and info buttons on hover.
-     * @param {object} item - The movie/series data object.
-     * @returns {HTMLElement} The created movie card div.
-     */
-    const createMovieCard = (item) => {
-        const card = document.createElement('div');
-        card.className = 'movie-card-container relative flex-shrink-0 w-32 md:w-40 lg:w-48 rounded-md overflow-hidden cursor-pointer group'; // Added 'group' class
-
-        const posterUrl = isValidPosterUrl(item.poster) ? item.poster : `https://placehold.co/300x450/000000/FFFFFF?text=${encodeURIComponent(item.title || 'No Title')}`;
-
-        // Determine initial My List button state
-        const isInList = isItemInMyList(item.imdbID);
-        const myListIcon = isInList ? 'fas fa-check' : 'fas fa-plus';
-        const myListBtnClass = isInList ? 'mylist-toggle-btn added' : 'mylist-toggle-btn';
-        const myListBtnTitle = isInList ? `Remove ${item.title} from My List` : `Add ${item.title} to My List`;
-
-
-        card.innerHTML = `
-            <img data-src="${posterUrl}" alt="${item.title || 'No Title'} Poster" class="w-full h-48 md:h-60 lg:h-72 object-cover rounded-md lazy-load-img"
-                 onerror="this.onerror=null;this.src='https://placehold.co/300x450/000000/FFFFFF?text=Image+Missing'; console.error('Image failed to load for: ${item.title || 'No Title'} (${item.imdbID || 'N/A'}) - Original URL: ${item.poster || 'N/A'}');">
-            <div class="movie-card-info">
-                <h3 class="text-sm md:text-base font-semibold truncate">${item.title || 'No Title'}</h3>
-                <p class="text-xs text-gray-400">${item.year || 'N/A'}</p>
-            </div>
-            <div class="movie-card-buttons absolute hidden group-hover:flex">
-                <button class="play-small-btn" data-imdb-id="${item.imdbID}" data-type="${item.type}" data-playable-url="${item.telegramPlayableUrl || ''}" title="Play ${item.title}">
-                    <i class="fas fa-play"></i>
-                </button>
-                <button class="${myListBtnClass}" data-imdb-id="${item.imdbID}" data-title="${item.title}" data-poster="${item.poster}" data-type="${item.type}" data-year="${item.year}" title="${myListBtnTitle}">
-                    <i class="${myListIcon}"></i>
-                </button>
-                <button class="info-small-btn" data-imdb-id="${item.imdbID}" data-type="${item.type}" title="More info on ${item.title}">
-                    <i class="fas fa-info-circle"></i>
-                </button>
-            </div>
-        `;
-
-        // Observe the image for lazy loading
-        const imgElement = card.querySelector('img');
-        if (imgElement) {
-            lazyLoadObserver.observe(imgElement);
-        }
-
-        // Add event listeners for the new buttons on the card
-        card.querySelector('.play-small-btn')?.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent card click from opening detail overlay
-            const urlToPlay = e.currentTarget.dataset.playableUrl;
-            if (urlToPlay && urlToPlay !== 'null') { // Ensure url is not "null" string
-                playMovie(urlToPlay);
-            } else {
-                showMessageBox(`No playable link available for ${item.title || 'this content'}.`, 'info');
-            }
+    if (items && items.length > 0) {
+        items.forEach(item => {
+            const card = createContentCard(item);
+            container.appendChild(card);
         });
-
-        card.querySelector('.info-small-btn')?.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent card click from opening detail overlay
-            showDetailsOverlay(item.imdbID, item.type);
-        });
-
-        card.querySelector('.mylist-toggle-btn')?.addEventListener('click', async (e) => {
-            e.stopPropagation(); // Prevent card click from opening detail overlay
-            const btn = e.currentTarget;
-            const itemImdbID = btn.dataset.imdbId;
-            const itemTitle = btn.dataset.title;
-            const itemPoster = btn.dataset.poster;
-            const itemType = btn.dataset.type;
-            const itemYear = btn.dataset.year;
-
-            if (isItemInMyList(itemImdbID)) {
-                await removeFromMyList(itemImdbID, true); // Pass true to indicate card update
-            } else {
-                await addToMyList({ imdbID: itemImdbID, title: itemTitle, poster: itemPoster, type: itemType, year: itemYear }, true); // Pass true to indicate card update
-            }
-            // The card's state will be updated by refreshMyListAndUI
-        });
-
-        // The main card click listener (for background image area, or if buttons not clicked)
-        card.addEventListener('click', () => {
-            showDetailsOverlay(item.imdbID, item.type);
-        });
-
-        return card;
-    };
-
-    /**
-     * Fetches and displays a section of movies or series.
-     * @param {string} title - The title of the section (e.g., "Trending Now").
-     * @param {string} endpoint - The API endpoint to fetch data from.
-     * @param {boolean} isGridCategory - If true, displays as a full grid instead of a scrollable carousel.
-     * @returns {Promise<void>} A promise that resolves when the section is displayed.
-     */
-    const fetchAndDisplaySection = async (title, endpoint, isGridCategory = false) => {
-        const sectionDiv = document.createElement('div');
-        sectionDiv.className = 'movie-section mb-8';
-        const movieRowClasses = isGridCategory ?
-            'movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4' :
-            'movie-row flex space-x-3 overflow-x-auto scrollbar-hide pb-4 scroll-snap-x';
-
-        sectionDiv.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">${title}</h2><div class="${movieRowClasses}"></div>`;
-        const movieRow = sectionDiv.querySelector(`.${isGridCategory ? 'movie-grid-category' : 'movie-row'}`);
-
-        movieSectionsContainer.appendChild(sectionDiv); // Append the section container immediately
-
-        try {
-            const data = await fetchData(endpoint);
-
-            let itemsToDisplay = [];
-            if (endpoint.includes('/api/search')) {
-                itemsToDisplay = [...(data.movies || []), ...(data.series || [])];
-            } else if (endpoint.includes('/api/mylist')) {
-                itemsToDisplay = data.items || [];
-            } else {
-                itemsToDisplay = data;
-            }
-
-            // Filter for items with valid posters. Backend now tries to return valid posters.
-            const filteredItems = itemsToDisplay.filter(item => isValidPosterUrl(item.poster));
-
-            if (filteredItems && filteredItems.length > 0) {
-                filteredItems.forEach(item => {
-                    if (item.imdbID && item.type) { // Ensure basic identifiers exist
-                        const card = createMovieCard(item);
-                        if (!isGridCategory) {
-                            card.classList.add('scroll-snap-start');
-                        }
-                        movieRow.appendChild(card);
-                    }
-                });
-            } else {
-                movieRow.innerHTML = `<p class="text-gray-400">No content found for "${title}" with valid images.</p>`;
-            }
-        } catch (error) {
-            console.error(`Failed to load content for "${title}" from our servers:`, error);
-            movieRow.innerHTML = `<p class="text-red-500">Failed to load content for "${title}" from our servers. Please try again later.</p>`;
+    } else {
+        if (noContentMessage) {
+             noContentMessage.classList.remove('hidden');
+             noContentMessage.textContent = "No content available.";
+        } else if (isGrid) {
+            container.innerHTML = '<div class="no-content-message">No content available.</div>';
         }
-    };
+    }
+}
 
-    /**
-     * Fetches details for a specific movie/series and displays them in an overlay.
-     * @param {string} imdbId - The IMDb ID of the movie/series.
-     * @param {string} type - The type of content ('movie' or 'series').
-     */
-    const showDetailsOverlay = async (imdbId, type) => {
-        showLoading();
-        try {
-            // First try to get it from local list if available and then fetch details
-            const localItem = userMyList.find(item => item.imdbID === imdbId && item.type === type);
-            let data = null;
+// --- Core Content Loading Functions ---
 
-            if (localItem && localItem.plot && localItem.director) { // Basic check if local item has enough detail
-                data = localItem;
-                console.log('Using local item data for detail overlay:', localItem);
-            } else {
-                const endpoint = `${API_BASE_URL}/${type}s/${imdbId}`;
-                data = await fetchData(endpoint);
-                console.log('Fetched fresh data for detail overlay:', data);
-            }
+/**
+ * Loads content for the hero banner.
+ */
+async function loadHeroContent() {
+    try {
+        heroTitle.textContent = 'Loading...';
+        heroPlot.textContent = 'Fetching trending content. Please wait...';
+        heroSection.style.backgroundImage = 'none'; // Clear previous background
+        heroPlayButton.classList.add('hidden');
+        heroInfoButton.classList.add('hidden');
 
 
-            if (data) {
-                const overlayPosterUrl = isValidPosterUrl(data.poster) ? data.poster : `https://placehold.co/400x600/000000/FFFFFF?text=No+Image`;
-
-                // Update My List button state dynamically
-                const isInList = isItemInMyList(data.imdbID);
-                const myListIconClass = isInList ? 'fas fa-check' : 'fas fa-plus';
-                const myListText = isInList ? 'In My List' : 'My List';
-
-                const playableUrl = data.telegramPlayableUrl;
-                let playButtonHtml = '';
-                if (playableUrl && playableUrl !== 'null') { // Ensure url is not "null" string
-                    playButtonHtml = `
-                        <button id="detail-play-btn" class="bg-white text-black px-6 py-3 rounded-md font-semibold hover:bg-gray-300 transition-colors flex items-center justify-center w-full play-btn" data-playable-url="${playableUrl}">
-                            <i class="fas fa-play mr-2"></i> Play
-                        </button>
-                    `;
+        const trending = await apiRequest('/api/movies/trending');
+        if (trending && trending.length > 0) {
+            // Pick a random movie from the trending list for the hero banner
+            const randomMovie = trending[Math.floor(Math.random() * trending.length)];
+            currentHeroContent = randomMovie; // Store for info button click
+            heroTitle.textContent = randomMovie.title;
+            heroPlot.textContent = randomMovie.plot;
+            heroSection.style.backgroundImage = `url(${randomMovie.backdrop || randomMovie.poster || 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Backdrop'})`;
+            
+            // Show buttons and update their functionality
+            heroPlayButton.classList.remove('hidden');
+            heroInfoButton.classList.remove('hidden');
+            heroPlayButton.onclick = () => {
+                if (randomMovie.telegramPlayableUrl) {
+                    window.open(randomMovie.telegramPlayableUrl, '_blank');
                 } else {
-                    playButtonHtml = `
-                        <button id="detail-play-btn" class="bg-gray-700 text-gray-400 px-6 py-3 rounded-md font-semibold cursor-not-allowed flex items-center justify-center w-full" disabled>
-                            <i class="fas fa-ban mr-2"></i> No Playable Link
-                        </button>
-                    `;
+                    alert('No playable link available yet.');
                 }
+            };
+            heroInfoButton.onclick = () => showDetailsOverlay(randomMovie.imdbID || randomMovie.tmdbId, randomMovie.type);
+        } else {
+            heroTitle.textContent = 'Content Not Available';
+            heroPlot.textContent = 'We couldn\'t load trending content for the hero section. Please ensure your backend is running and returning valid data, or check network.';
+            heroSection.style.backgroundImage = 'none';
+            heroPlayButton.onclick = null;
+            heroInfoButton.onclick = null;
+            heroPlayButton.classList.add('hidden');
+            heroInfoButton.classList.add('hidden');
+            console.warn("No trending movies returned for hero banner.");
+        }
+    } catch (error) {
+        console.error("Failed to load hero content:", error);
+        heroTitle.textContent = 'Error Loading Content';
+        heroPlot.textContent = 'Failed to load trending content. Please check your network connection or try again later.';
+        heroSection.style.backgroundImage = 'none';
+        heroPlayButton.onclick = null;
+        heroInfoButton.onclick = null;
+        heroPlayButton.classList.add('hidden');
+        heroInfoButton.classList.add('hidden');
+    }
+}
 
-                detailOverlayContainer.innerHTML = `
-                    <div class="detail-overlay-content relative bg-[#1a1a1a] rounded-lg shadow-xl max-w-4xl w-full flex flex-col md:flex-row overflow-hidden">
-                        <button id="close-detail-overlay-btn" class="absolute top-3 right-3 text-white text-3xl font-bold z-10 close-overlay-btn">
-                            &times;
-                        </button>
-                        <div class="md:w-1/3 flex-shrink-0">
-                            <img src="${overlayPosterUrl}" alt="${data.title || 'No Title'} Poster" class="w-full h-auto object-cover md:h-full rounded-t-lg md:rounded-l-lg md:rounded-t-none" onerror="this.onerror=null;this.src='https://placehold.co/400x600/000000/FFFFFF?text=No+Image';">
-                        </div>
-                        <div class="md:w-2/3 p-6 text-white custom-scrollbar overflow-y-auto max-h-[80vh]">
-                            <h2 class="text-3xl md:text-4xl font-bold mb-2">${data.title || 'N/A'}</h2>
-                            <p class="text-gray-400 text-sm mb-4">
-                                ${data.year || 'N/A'} | ${data.rated || 'N/A'} | ${data.runtime || 'N/A'} | ${Array.isArray(data.genre) ? data.genre.join(', ') : data.genre || 'N/A'}
-                            </p>
-                            <p class="mb-4 text-base">${data.plot || 'No plot available.'}</p>
-                            <div class="flex flex-col space-y-4 mb-6">
-                                ${playButtonHtml}
-                                <button id="detail-my-list-btn" class="bg-gray-700 text-white px-6 py-3 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center justify-center w-full add-to-list-btn"
-                                    data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
-                                    <i class="${myListIconClass} mr-2"></i> <span>${myListText}</span>
-                                </button>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-6">
-                                <p><strong>Director:</strong> ${data.director || 'N/A'}</p>
-                                <p><strong>Writer:</strong> ${data.writer || 'N/A'}</p>
-                                <p><strong>Actors:</strong> ${data.actors || 'N/A'}</p>
-                                <p><strong>Language:</strong> ${data.language || 'N/A'}</p>
-                                <p><strong>Country:</strong> ${data.country || 'N/A'}</p>
-                                <p><strong>Awards:</b> ${data.awards || 'N/A'}</p>
-                                <p><strong>IMDb Rating:</b> ${data.imdbRating || 'N/A'}</p>
-                                <p><strong>IMDb ID:</strong> ${data.imdbID || 'N/A'}</p>
-                                ${type === 'series' && data.totalSeasons ? `<p><strong>Total Seasons:</strong> ${data.totalSeasons}</p>` : ''}
-                            </div>
+/**
+ * Loads and populates content rows for the home page.
+ */
+async function loadHomeContentRows() {
+    // Display loading messages for rows initially
+    popularMoviesRow.innerHTML = '<div class="no-content-message">Loading popular movies...</div>';
+    bestSeriesRow.innerHTML = '<div class="no-content-message">Loading top rated series...</div>';
+
+    try {
+        const [popularMovies, bestSeries] = await Promise.all([
+            apiRequest('/api/movies/popular'),
+            apiRequest('/api/series/best')
+        ]);
+
+        populateContent(popularMoviesRow, popularMovies);
+        populateContent(bestSeriesRow, bestSeries);
+
+        // Dynamically add genre rows
+        await addDynamicGenreRows();
+
+    } catch (error) {
+        console.error("Failed to load home page content rows:", error);
+        popularMoviesRow.innerHTML = '<div class="no-content-message">Failed to load popular movies.</div>';
+        bestSeriesRow.innerHTML = '<div class="no-content-message">Failed to load top rated series.</div>';
+    }
+}
+
+/**
+ * Adds dynamic genre rows to the home page.
+ */
+async function addDynamicGenreRows() {
+    const commonGenres = ['Action', 'Comedy', 'Drama', 'Thriller', 'Animation', 'Science Fiction']; // Example genres
+
+    for (const genre of commonGenres) {
+        const genreMovieSectionId = `genre-movie-${genre.toLowerCase().replace(/\s/g, '-')}-row`;
+        const genreSeriesSectionId = `genre-series-${genre.toLowerCase().replace(/\s/g, '-')}-row`;
+
+        // Movies by Genre
+        let movieSection = document.getElementById(genreMovieSectionId);
+        if (!movieSection) {
+            movieSection = document.createElement('section');
+            movieSection.classList.add('content-section');
+            movieSection.innerHTML = `
+                <h2>${genre} Movies</h2>
+                <div class="content-row" id="${genreMovieSectionId}">
+                    <div class="no-content-message">Loading ${genre} movies...</div>
+                </div>
+                <button class="scroll-arrow left" data-target="${genreMovieSectionId}">&lt;</button>
+                <button class="scroll-arrow right" data-target="${genreMovieSectionId}">&gt;</button>
+            `;
+            contentRowsContainer.appendChild(movieSection);
+        }
+        const movieRow = document.getElementById(genreMovieSectionId);
+        try {
+            const movies = await apiRequest(`/api/movies/genre/${genre}`);
+            populateContent(movieRow, movies);
+        } catch (error) {
+            console.error(`Failed to load ${genre} movies:`, error);
+            movieRow.innerHTML = `<div class="no-content-message">Failed to load ${genre} movies.</div>`;
+        }
+
+        // Series by Genre
+        let seriesSection = document.getElementById(genreSeriesSectionId);
+        if (!seriesSection) {
+            seriesSection = document.createElement('section');
+            seriesSection.classList.add('content-section');
+            seriesSection.innerHTML = `
+                <h2>${genre} Series</h2>
+                <div class="content-row" id="${genreSeriesSectionId}">
+                    <div class="no-content-message">Loading ${genre} series...</div>
+                </div>
+                <button class="scroll-arrow left" data-target="${genreSeriesSectionId}">&lt;</button>
+                <button class="scroll-arrow right" data-target="${genreSeriesSectionId}">&gt;</button>
+            `;
+            contentRowsContainer.appendChild(seriesSection);
+        }
+        const seriesRow = document.getElementById(genreSeriesSectionId);
+        try {
+            const series = await apiRequest(`/api/series/genre/${genre}`);
+            populateContent(seriesRow, series);
+        } catch (error) {
+            console.error(`Failed to load ${genre} series:`, error);
+            seriesRow.innerHTML = `<div class="no-content-message">Failed to load ${genre} series.</div>`;
+        }
+    }
+}
+
+/**
+ * Loads all content of a specific type (movies or series) into a grid.
+ * @param {'movie'|'series'} type - The type of content to load.
+ * @param {string} containerId - The ID of the container element to populate.
+ */
+async function loadAllContent(type, containerId) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = '<div class="no-content-message">Loading content...</div>'; // Initial loading message
+
+    try {
+        const endpoint = type === 'movie' ? '/api/movies' : '/api/series';
+        const content = await apiRequest(endpoint);
+        populateContent(container, content, true); // True for grid layout
+    } catch (error) {
+        console.error(`Failed to load all ${type} content:`, error);
+        container.innerHTML = `<div class="no-content-message">Failed to load all ${type} content.</div>`;
+    }
+}
+
+/**
+ * Performs a search and displays results.
+ * @param {string} query - The search query.
+ */
+async function performSearch(query) {
+    if (!query) {
+        navigateTo('home-page'); // Go back to home if query is empty
+        return;
+    }
+
+    navigateTo('search-results-page', false); // Navigate without pushing new state repeatedly
+    searchQueryDisplay.textContent = query;
+    searchResultsGrid.innerHTML = '<div class="no-content-message">Searching...</div>';
+
+    try {
+        const data = await apiRequest(`/api/search?q=${encodeURIComponent(query)}`);
+        const allResults = [...data.movies, ...data.series];
+        if (allResults.length === 0) {
+            searchResultsGrid.innerHTML = '<div class="no-content-message">No results found for your search.</div>';
+        } else {
+            populateContent(searchResultsGrid, allResults, true);
+        }
+    } catch (error) {
+        console.error("Search failed:", error);
+        searchResultsGrid.innerHTML = '<div class="no-content-message">Failed to perform search. Please try again.</div>';
+    }
+}
+
+/**
+ * Loads the user's "My List" content.
+ */
+async function loadMyList() {
+    currentUserIdSpan.textContent = currentUserId; // Display user ID
+    myListGrid.innerHTML = '<div class="no-content-message">Loading your list...</div>'; // Initial loading message
+
+    try {
+        const userList = await apiRequest(`/api/mylist/${currentUserId}`);
+        if (userList && userList.items && userList.items.length > 0) {
+            myListArr = userList.items; // Update local state
+            populateContent(myListGrid, userList.items, true);
+        } else {
+            myListArr = [];
+            myListGrid.innerHTML = '<div class="no-content-message">Your list is empty. Add some movies or series!</div>';
+        }
+    } catch (error) {
+        console.error("Failed to load My List:", error);
+        myListGrid.innerHTML = '<div class="no-content-message">Failed to load your list.</div>';
+    }
+}
+
+/**
+ * Adds an item to the user's "My List".
+ * @param {object} item - The item to add.
+ */
+async function addItemToMyList(item) {
+    try {
+        await apiRequest('/api/mylist/add', 'POST', { userId: currentUserId, item });
+        myListArr.push(item); // Update local state
+        modalMyListButton.classList.add('added');
+        addIcon.classList.add('hidden');
+        checkIcon.classList.remove('hidden');
+        console.log('Item added to My List successfully!');
+    } catch (error) {
+        console.error('Failed to add item to My List:', error);
+        alert(`Failed to add item to My List: ${error.message}`);
+    }
+}
+
+/**
+ * Removes an item from the user's "My List".
+ * @param {string} imdbId - The IMDb ID of the item to remove.
+ * @param {string} tmdbId - The TMDB ID of the item to remove.
+ */
+async function removeItemFromMyList(imdbId, tmdbId) {
+    try {
+        await apiRequest('/api/mylist/remove', 'POST', { userId: currentUserId, imdbID: imdbId, tmdbId: tmdbId });
+        myListArr = myListArr.filter(item => item.imdbID !== imdbId && item.tmdbId !== tmdbId); // Update local state
+        modalMyListButton.classList.remove('added');
+        addIcon.classList.remove('hidden');
+        checkIcon.classList.add('hidden');
+        console.log('Item removed from My List successfully!');
+    } catch (error) {
+        console.error('Failed to remove item from My List:', error);
+        alert(`Failed to remove item from My List: ${error.message}`);
+    }
+}
+
+/**
+ * Checks if an item is in the user's "My List".
+ * @param {string} imdbId - The IMDb ID of the item.
+ * @param {string} tmdbId - The TMDB ID of the item.
+ * @returns {boolean} True if the item is in the list, false otherwise.
+ */
+function isItemInMyList(imdbId, tmdbId) {
+    return myListArr.some(item => (imdbId && item.imdbID === imdbId) || (tmdbId && item.tmdbId === tmdbId));
+}
+
+// --- Description Overlay Logic ---
+
+/**
+ * Shows the description overlay with details for a movie or series.
+ * @param {string} id - The IMDb ID or TMDB ID of the content.
+ * @param {'movie'|'series'} type - The type of content ('movie' or 'series').
+ */
+async function showDetailsOverlay(id, type) {
+    descriptionOverlay.classList.add('active');
+    modalBackdrop.style.backgroundImage = 'none'; // Clear previous backdrop
+    // Reset modal content
+    modalTitle.textContent = 'Loading...';
+    modalPlot.textContent = 'Fetching details...';
+    modalMatchScore.textContent = '';
+    modalReleaseYear.textContent = '';
+    modalRuntimeOrSeasons.textContent = '';
+    modalGenres.textContent = '';
+    modalDirectorLine.classList.add('hidden');
+    modalActorsLine.classList.add('hidden');
+    modalSeriesSection.classList.add('hidden'); // Hide series section by default
+    seasonSelect.innerHTML = '';
+    episodeList.innerHTML = '<div class="no-content-message">Loading episodes...</div>';
+    modalPlayButton.classList.remove('hidden'); // Ensure buttons are visible for details load
+    modalMyListButton.classList.remove('hidden');
+
+    try {
+        const details = await apiRequest(`/api/${type}s/${id}`); // movies/id or series/id
+        currentDetailedItem = details; // Store for My List button and other actions
+
+        modalTitle.textContent = details.title;
+        modalPlot.textContent = details.plot;
+        modalMatchScore.textContent = `${Math.round(details.imdbRating * 10)}% Match`; // TMDB rating * 10 for Netflix-like percentage
+        modalReleaseYear.textContent = details.year;
+
+        // Set runtime for movies, seasons for series
+        if (details.type === 'movie') {
+            modalRuntimeOrSeasons.textContent = details.runtime;
+            modalDirectorLine.classList.remove('hidden');
+            modalDirector.textContent = details.director;
+            modalActorsLine.classList.remove('hidden');
+            modalActors.textContent = details.actors;
+        } else { // Series
+            modalRuntimeOrSeasons.textContent = `${details.totalSeasons} Season${parseInt(details.totalSeasons) === 1 ? '' : 's'}`;
+            modalDirectorLine.classList.add('hidden'); // Series typically don't show single director like movies
+            modalActorsLine.classList.remove('hidden');
+            modalActors.textContent = details.actors;
+            modalSeriesSection.classList.remove('hidden');
+            await loadSeasonsForSeries(details.tmdbId); // Load seasons for series
+        }
+
+        modalGenres.textContent = details.genre.join(', ');
+        modalBackdrop.style.backgroundImage = `url(${details.backdrop || details.poster || 'https://placehold.co/850x400/000000/FFFFFF?text=No+Backdrop'})`;
+
+        // Set My List button state
+        if (isItemInMyList(details.imdbID, details.tmdbId)) {
+            modalMyListButton.classList.add('added');
+            addIcon.classList.add('hidden');
+            checkIcon.classList.remove('hidden');
+        } else {
+            modalMyListButton.classList.remove('added');
+            addIcon.classList.remove('hidden');
+            checkIcon.classList.add('hidden');
+        }
+
+        // Set Play button functionality
+        modalPlayButton.onclick = () => {
+            if (details.telegramPlayableUrl) {
+                window.open(details.telegramPlayableUrl, '_blank');
+            } else {
+                alert('No playable link available yet.');
+            }
+        };
+
+    } catch (error) {
+        console.error("Failed to load details overlay:", error);
+        modalTitle.textContent = 'Error Loading Details';
+        modalPlot.textContent = 'Failed to fetch content details. Please try again.';
+        modalBackdrop.style.backgroundImage = 'none';
+        modalPlayButton.onclick = null;
+        modalMyListButton.onclick = null;
+        modalPlayButton.classList.add('hidden'); // Hide buttons on error
+        modalMyListButton.classList.add('hidden');
+        modalSeriesSection.classList.add('hidden'); // Hide series section on error
+    }
+}
+
+/**
+ * Loads seasons for a given series TMDB ID and populates the season dropdown.
+ * @param {string} tmdbId - The TMDB ID of the series.
+ */
+async function loadSeasonsForSeries(tmdbId) {
+    seasonSelect.innerHTML = '<option disabled selected>Loading seasons...</option>';
+    episodeList.innerHTML = '<div class="no-content-message">Loading seasons...</div>';
+    try {
+        const seasons = await apiRequest(`/api/series/${tmdbId}/seasons`);
+        seasonSelect.innerHTML = ''; // Clear existing options
+        if (seasons && seasons.length > 0) {
+            // Filter out season 0 (specials) if it exists and isn't the only season
+            const playableSeasons = seasons.filter(s => s.season_number > 0);
+            // Add "Specials" season if it exists
+            const specialSeason = seasons.find(s => s.season_number === 0);
+            if (specialSeason) {
+                const option = document.createElement('option');
+                option.value = specialSeason.season_number;
+                option.textContent = `Season ${specialSeason.season_number} (Specials)`;
+                seasonSelect.appendChild(option);
+            }
+
+            playableSeasons.sort((a, b) => a.season_number - b.season_number); // Sort by season number
+            playableSeasons.forEach(season => {
+                const option = document.createElement('option');
+                option.value = season.season_number;
+                option.textContent = `Season ${season.season_number}`;
+                seasonSelect.appendChild(option);
+            });
+            
+            // Automatically load episodes for the first season (or specials if only one)
+            if (seasonSelect.options.length > 0) {
+                seasonSelect.value = seasonSelect.options[0].value;
+                await loadEpisodesForSeason(tmdbId, seasonSelect.value);
+            } else {
+                 episodeList.innerHTML = '<div class="no-content-message">No seasons found.</div>';
+            }
+
+        } else {
+            seasonSelect.innerHTML = '<option disabled selected>No seasons available</option>';
+            episodeList.innerHTML = '<div class="no-content-message">No seasons found.</div>';
+        }
+    } catch (error) {
+        console.error(`Failed to load seasons for series ${tmdbId}:`, error);
+        seasonSelect.innerHTML = '<option disabled selected>Error loading seasons</option>';
+        episodeList.innerHTML = '<div class="no-content-message">Error loading seasons.</div>';
+    }
+}
+
+/**
+ * Loads episodes for a given series TMDB ID and season number.
+ * @param {string} tmdbId - The TMDB ID of the series.
+ * @param {number} seasonNumber - The season number.
+ */
+async function loadEpisodesForSeason(tmdbId, seasonNumber) {
+    episodeList.innerHTML = '<div class="no-content-message">Loading episodes...</div>'; // Loading message
+    try {
+        const episodes = await apiRequest(`/api/series/${tmdbId}/season/${seasonNumber}/episodes`);
+        episodeList.innerHTML = ''; // Clear previous episodes
+        if (episodes && episodes.length > 0) {
+            episodes.forEach(episode => {
+                const episodeItem = document.createElement('div');
+                episodeItem.classList.add('episode-item');
+                // No direct play link for episodes in this clone, just display info
+                episodeItem.innerHTML = `
+                    <div class="episode-thumbnail">
+                        <span class="episode-number">${episode.episode_number}</span>
+                        <img src="${episode.still_path ? `${TMDB_IMAGE_BASE_URL}w500${episode.still_path}` : 'https://placehold.co/160x90/444444/FFFFFF?text=No+Image'}" alt="${episode.name}" onerror="this.onerror=null;this.src='https://placehold.co/160x90/444444/FFFFFF?text=No+Image';">
+                    </div>
+                    <div class="episode-info">
+                        <h4>${episode.episode_number}. ${episode.name}</h4>
+                        <p>${episode.overview}</p>
+                        <div class="episode-meta">
+                            ${episode.air_date ? `Aired: ${new Date(episode.air_date).getFullYear()}` : ''}
+                            ${episode.runtime !== 'N/A' && episode.runtime !== null ? ` | Runtime: ${episode.runtime} min` : ''}
+                            ${episode.vote_average !== 'N/A' && episode.vote_average !== null ? ` | Rating: ${episode.vote_average}/10` : ''}
                         </div>
                     </div>
                 `;
-                detailOverlayContainer.classList.add('active');
-                detailOverlayContainer.style.display = 'flex';
-                document.body.classList.add('overflow-hidden');
-
-                detailOverlayContainer.querySelector('#close-detail-overlay-btn').addEventListener('click', closeDetailsOverlay);
-                detailOverlayContainer.addEventListener('click', (e) => {
-                    if (e.target === detailOverlayContainer) {
-                        closeDetailsOverlay();
-                    }
-                });
-
-                const detailPlayBtn = detailOverlayContainer.querySelector('#detail-play-btn');
-                if (detailPlayBtn && !detailPlayBtn.disabled) {
-                    detailPlayBtn.addEventListener('click', () => {
-                        const urlToPlay = detailPlayBtn.dataset.playableUrl;
-                        if (urlToPlay && urlToPlay !== 'null') {
-                            playMovie(urlToPlay);
-                        } else {
-                            showMessageBox('No playable link available for this content.', 'info');
-                        }
-                    });
-                }
-
-                const addToListBtn = detailOverlayContainer.querySelector('#detail-my-list-btn');
-                if (addToListBtn) {
-                    addToListBtn.addEventListener('click', async (e) => {
-                        const itemToAdd = {
-                            imdbID: e.currentTarget.dataset.imdbId,
-                            title: e.currentTarget.dataset.title,
-                            poster: e.currentTarget.dataset.poster,
-                            type: e.currentTarget.dataset.type,
-                            year: e.currentTarget.dataset.year
-                        };
-                        if (isItemInMyList(itemToAdd.imdbID)) {
-                            await removeFromMyList(itemToAdd.imdbID);
-                        } else {
-                            await addToMyList(itemToAdd);
-                        }
-                        // Refresh the button state after action
-                        const updatedIsInList = isItemInMyList(itemToAdd.imdbID);
-                        addToListBtn.querySelector('i').className = updatedIsInList ? 'fas fa-check mr-2' : 'fas fa-plus mr-2';
-                        addToListBtn.querySelector('span').textContent = updatedIsInList ? 'In My List' : 'My List';
-                    });
-                }
-
-            } else {
-                console.error('No data received for details overlay.');
-                showMessageBox('Error fetching details: No data received.', 'error');
-            }
-
-        } catch (error) {
-            console.error('Error fetching details:', error);
-            showMessageBox('Error fetching details. Please try again.', 'error');
-        } finally {
-            hideLoading();
-        }
-    };
-
-    /**
-     * Closes the detail overlay.
-     */
-    const closeDetailsOverlay = () => {
-        detailOverlayContainer.classList.remove('active');
-        setTimeout(() => {
-            detailOverlayContainer.style.display = 'none';
-            document.body.classList.remove('overflow-hidden');
-            detailOverlayContainer.innerHTML = '';
-        }, 300);
-    };
-
-    /**
-     * Plays a movie by loading its URL into the video player iframe.
-     * Shows a buffering spinner.
-     * @param {string} url - The URL of the video to play.
-     */
-    const playMovie = (url) => {
-        if (moviePlayer && videoPlayerOverlay && bufferingSpinner) {
-            // Show buffering spinner immediately
-            bufferingSpinner.classList.remove('hidden');
-
-            moviePlayer.src = url;
-            videoPlayerOverlay.classList.add('active');
-            videoPlayerOverlay.style.display = 'flex';
-            document.body.classList.add('overflow-hidden');
-
-            // Set a timeout to hide the spinner, as iframe onload is not reliable for video buffering
-            const spinnerTimeout = setTimeout(() => {
-                if (!bufferingSpinner.classList.contains('hidden')) {
-                    bufferingSpinner.classList.add('hidden');
-                    console.log('Buffering spinner hidden by timeout.');
-                }
-            }, 3000); // Hide after 3 seconds if not already hidden
-
-            // Optional: You could listen for messages from the iframe if it sends playback events,
-            // but for external embeds, this is often not feasible.
-            // window.addEventListener('message', (event) => {
-            //     if (event.origin === 'https://www.youtube.com' && event.data.event === 'onReady') {
-            //         bufferingSpinner.classList.add('hidden');
-            //         clearTimeout(spinnerTimeout);
-            //     }
-            // });
-
+                episodeList.appendChild(episodeItem);
+            });
         } else {
-            showMessageBox('Video player not available.', 'error');
+            episodeList.innerHTML = '<div class="no-content-message">No episodes found for this season.</div>';
         }
-    };
-
-    /**
-     * Closes the video player overlay.
-     */
-    const closeMoviePlayer = () => {
-        if (moviePlayer && videoPlayerOverlay && bufferingSpinner) {
-            moviePlayer.src = ''; // Stop video playback
-            bufferingSpinner.classList.add('hidden'); // Hide spinner immediately
-            videoPlayerOverlay.classList.remove('active');
-            setTimeout(() => {
-                videoPlayerOverlay.style.display = 'none';
-                document.body.classList.remove('overflow-hidden');
-            }, 300);
-        }
-    };
-
-    if (closePlayerBtn) {
-        closePlayerBtn.addEventListener('click', closeMoviePlayer);
+    } catch (error) {
+        console.error(`Failed to load episodes for series ${tmdbId}, season ${seasonNumber}:`, error);
+        episodeList.innerHTML = '<div class="no-content-message">Error loading episodes.</div>';
     }
-    if (videoPlayerOverlay) {
-        videoPlayerOverlay.addEventListener('click', (e) => {
-            if (e.target === videoPlayerOverlay) {
-                closeMoviePlayer();
-            }
-        });
+}
+
+/**
+ * Hides the description overlay.
+ */
+function hideDetailsOverlay() {
+    descriptionOverlay.classList.remove('active');
+    currentDetailedItem = null; // Clear detailed item
+    // Clear season/episode info
+    seasonSelect.innerHTML = '';
+    episodeList.innerHTML = '';
+}
+
+// --- Event Listeners ---
+
+// Header scroll effect
+window.addEventListener('scroll', () => {
+    if (window.scrollY > 0) {
+        mainHeader.classList.add('scrolled');
+    } else {
+        mainHeader.classList.remove('scrolled');
     }
+});
 
-    // --- Hero Section (Carousel) Functions ---
-    /**
-     * Fetches hero movies and populates the hero section.
-     * @returns {Promise<void>} A promise that resolves when hero content is fetched and displayed.
-     */
-    const fetchHeroMovies = async () => {
-        console.log("Fetching hero movies for carousel...");
-        try {
-            const data = await fetchData(`${API_BASE_URL}/movies/trending`);
-
-            if (data && data.length > 0) {
-                heroMoviesData = data.filter(item => isValidPosterUrl(item.poster) && isValidPosterUrl(item.backdrop)).slice(0, 5); // Ensure backdrop exists for hero
-
-                if (heroMoviesData.length > 0) {
-                    console.log(`Found ${heroMoviesData.length} valid trending movies for hero section.`);
-                    heroSlidesContainer.innerHTML = '';
-                    heroDotsContainer.innerHTML = '';
-
-                    heroMoviesData.forEach((movie, index) => {
-                        const slide = document.createElement('div');
-                        slide.className = 'hero-slide';
-
-                        const heroPosterUrl = isValidPosterUrl(movie.backdrop) ? movie.backdrop : (isValidPosterUrl(movie.poster) ? movie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image');
-
-                        slide.innerHTML = `
-                            <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
-                            <div class="hero-text-content">
-                                <h1 class="text-4xl md:text-6xl font-bold mb-4">${movie.title || 'No Title'}</h1>
-                                <p class="text-lg md:text-xl mb-6 line-clamp-3">${movie.plot || 'No description available.'}</p>
-                                <div class="flex space-x-4">
-                                    <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}" data-playable-url="${movie.telegramPlayableUrl || ''}">
-                                        <i class="fas fa-play mr-2"></i> Play
-                                    </button>
-                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center info-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}">
-                                        <i class="fas fa-info-circle mr-2"></i> More Info
-                                    </button>
-                                </div>
-                            </div>
-                        `;
-                        heroSlidesContainer.appendChild(slide);
-
-                        const dot = document.createElement('div');
-                        dot.className = `w-3 h-3 bg-gray-500 rounded-full cursor-pointer transition-colors ${index === 0 ? 'bg-white' : ''}`;
-                        dot.dataset.slideIndex = index;
-                        dot.addEventListener('click', () => goToSlide(index));
-                        heroDotsContainer.appendChild(dot);
-                    });
-
-                    updateHeroCarousel(0); // Set to the first slide and update background
-
-                    heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
-                        btn.addEventListener('click', (e) => {
-                            const urlToPlay = e.currentTarget.dataset.playableUrl;
-                            if (urlToPlay && urlToPlay !== 'null') {
-                                playMovie(urlToPlay);
-                            } else {
-                                showMessageBox(`No playable link available for ${e.currentTarget.dataset.title || 'this content'}.`, 'info');
-                            }
-                        });
-                    });
-                    heroSlidesContainer.querySelectorAll('.info-btn').forEach(btn => { // Added info button listener
-                        btn.addEventListener('click', (e) => {
-                            showDetailsOverlay(e.currentTarget.dataset.imdbId, e.currentTarget.dataset.type);
-                        });
-                    });
-
-
-                    if (heroPrevBtn) heroPrevBtn.style.display = 'flex';
-                    if (heroNextBtn) heroNextBtn.style.display = 'flex';
-                    if (heroDotsContainer) heroDotsContainer.style.display = 'flex';
-
-                    startHeroCarousel();
-                } else {
-                    console.log("No valid trending movies with images found for hero section. Hiding hero.");
-                    if (heroSection) {
-                        heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies with valid images found for hero section.</p>';
-                        heroSection.classList.add('hidden-hero');
-                    }
-                }
-            } else {
-                console.log("No trending movies found from backend. Hiding hero.");
-                if (heroSection) {
-                    heroSection.innerHTML = '<p class="text-center text-red-500">No trending movies found for hero section.</p>';
-                    heroSection.classList.add('hidden-hero');
-                }
-            }
-        } catch (error) {
-            console.error('Error fetching hero movies:', error);
-            if (heroSection) {
-                heroSection.innerHTML = '<p class="text-center text-red-500">Error loading hero content. Please try again later.</p>';
-                heroSection.classList.add('hidden-hero');
+// Navigation clicks
+document.querySelectorAll('nav a, .logo, .footer-links a[data-page]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = e.target.dataset.page;
+        if (page) {
+            navigateTo(`${page}-page`);
+            // Close mobile menu if open
+            if (mainNav.classList.contains('active')) {
+                mainNav.classList.remove('active');
             }
         }
-    };
-
-    /**
-     * Updates the hero carousel display to the specified slide.
-     * @param {number} index - The index of the slide to show.
-     */
-    const updateHeroCarousel = (index) => {
-        const totalSlides = heroSlidesContainer.children.length;
-        if (totalSlides === 0) return;
-
-        currentHeroSlide = (index + totalSlides) % totalSlides;
-        const offset = -currentHeroSlide * 100;
-        heroSlidesContainer.style.transform = `translateX(${offset}%)`;
-
-        heroDotsContainer.querySelectorAll('div').forEach((dot, i) => {
-            if (i === currentHeroSlide) {
-                dot.classList.add('bg-white');
-                dot.classList.remove('bg-gray-500');
-            } else {
-                dot.classList.remove('bg-white');
-                dot.classList.add('bg-gray-500');
-            }
-        });
-
-        if (heroMoviesData.length > 0 && heroSection) {
-            const currentHeroMovie = heroMoviesData[currentHeroSlide];
-            // Prefer backdrop for hero, fall back to poster
-            const currentHeroImageUrl = isValidPosterUrl(currentHeroMovie.backdrop) ? currentHeroMovie.backdrop : (isValidPosterUrl(currentHeroMovie.poster) ? currentHeroMovie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image');
-            heroSection.style.setProperty('--hero-bg-image', `url('${currentHeroImageUrl}')`);
-        }
-    };
-
-    const nextSlide = () => {
-        updateHeroCarousel(currentHeroSlide + 1);
-    };
-
-    const prevSlide = () => {
-        updateHeroCarousel(currentHeroSlide - 1);
-    };
-
-    const goToSlide = (index) => {
-        clearInterval(heroInterval);
-        updateHeroCarousel(index);
-        startHeroCarousel();
-    };
-
-    const startHeroCarousel = () => {
-        clearInterval(heroInterval);
-        heroInterval = setInterval(nextSlide, 5000);
-    };
-
-
-    // --- My List Functions ---
-    /**
-     * Adds an item to the user's My List.
-     * @param {object} item - The item to add.
-     * @param {boolean} [isFromCard=false] - True if called from a movie card, to avoid full page refresh.
-     */
-    const addToMyList = async (item, isFromCard = false) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/mylist/add`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, item }),
-            });
-            const result = await response.json();
-            if (response.ok) {
-                showMessageBox(result.message || 'Item added to My List!', 'success');
-                await refreshMyListAndUI(isFromCard);
-            } else {
-                showMessageBox(result.message || 'Failed to add item to My List.', 'error');
-            }
-        } catch (error) {
-            console.error('Error adding to My List:', error);
-            showMessageBox('Error adding to My List. Please try again.', 'error');
-        }
-    };
-
-    /**
-     * Removes an item from the user's My List.
-     * @param {string} imdbID - The IMDb ID of the item to remove.
-     * @param {boolean} [isFromCard=false] - True if called from a movie card, to avoid full page refresh.
-     */
-    const removeFromMyList = async (imdbID, isFromCard = false) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/mylist/remove`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId, imdbID }),
-            });
-            const result = await response.json();
-            if (response.ok) {
-                showMessageBox(result.message || 'Item removed from My List!', 'success');
-                await refreshMyListAndUI(isFromCard);
-            } else {
-                showMessageBox(result.message || 'Failed to remove item from My List.', 'error');
-            }
-        } catch (error) {
-            console.error('Error removing from My List:', error);
-            showMessageBox('Error removing from My List. Please try again.', 'error');
-        }
-    };
-
-    /**
-     * Refreshes the user's My List data and updates the UI accordingly.
-     * @param {boolean} [keepCurrentView=false] - If true, only updates card buttons without reloading the whole page.
-     */
-    const refreshMyListAndUI = async (keepCurrentView = false) => {
-        await fetchMyListStatus(); // Re-fetch the latest list
-
-        // Update all movie card buttons across the page
-        document.querySelectorAll('.movie-card-container').forEach(card => {
-            const imdbId = card.dataset.imdbId;
-            const myListBtn = card.querySelector('.mylist-toggle-btn');
-            if (myListBtn) {
-                const isInList = isItemInMyList(imdbId);
-                myListBtn.querySelector('i').className = isInList ? 'fas fa-check' : 'fas fa-plus';
-                myListBtn.classList.toggle('added', isInList);
-                myListBtn.title = isInList ? `Remove ${card.dataset.title} from My List` : `Add ${card.dataset.title} to My List`;
-            }
-        });
-
-        // Update the detail overlay button if it's currently open for the relevant item
-        if (detailOverlayContainer.classList.contains('active')) {
-            const detailImdbId = detailOverlayContainer.querySelector('#detail-my-list-btn')?.dataset.imdbId;
-            if (detailImdbId) {
-                const detailMyListBtn = detailOverlayContainer.querySelector('#detail-my-list-btn');
-                const updatedIsInList = isItemInMyList(detailImdbId);
-                detailMyListBtn.querySelector('i').className = updatedIsInList ? 'fas fa-check mr-2' : 'fas fa-plus mr-2';
-                detailMyListBtn.querySelector('span').textContent = updatedIsInList ? 'In My List' : 'My List';
-            }
-        }
-
-        // If currently on My List page, re-load it to reflect changes
-        if (!keepCurrentView && document.querySelector('.nav-link.active')?.dataset.content === 'mylist') {
-            await loadContent('mylist');
-        }
-    };
-
-
-    // --- Event Listeners ---
-
-    // Header scroll effect
-    if (header) {
-        window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                header.classList.add('scrolled');
-            } else {
-                header.classList.remove('scrolled');
-            }
-
-            if (window.innerWidth >= 768) {
-                if (window.scrollY > lastScrollY && window.scrollY > 200) {
-                    header.classList.add('hide-header');
-                } else {
-                    header.classList.remove('hide-header');
-                }
-            }
-            lastScrollY = window.scrollY;
-        });
-    }
-
-    // Navigation links click handler
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            navLinks.forEach(nav => nav.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-            const contentType = link.dataset.content;
-            loadContent(contentType);
-            // Close desktop search if open
-            if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
-                searchInputWrapper.classList.add('hidden');
-                searchInput.value = '';
-            }
-            // Close mobile search if open
-            if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
-                mobileSearchOverlay.classList.remove('active');
-                mobileSearchOverlay.style.display = 'none';
-                document.body.classList.remove('overflow-hidden');
-                mobileSearchInput.value = '';
-                mobileSearchResultsGrid.innerHTML = '';
-            }
-        });
     });
+});
 
-    // Search toggle and input functionality
-    if (searchToggleBtn && searchInputWrapper && searchInput) {
-        // Toggle desktop search input visibility
-        searchToggleBtn.addEventListener('click', () => {
-            searchInputWrapper.classList.toggle('hidden');
-            if (!searchInputWrapper.classList.contains('hidden')) {
-                searchInput.focus();
+// Mobile menu toggle
+menuToggle.addEventListener('click', () => {
+    mainNav.classList.toggle('active');
+});
+
+// Toggle search bar visibility
+toggleSearchBtn.addEventListener('click', () => {
+    searchBar.classList.toggle('hidden');
+    if (!searchBar.classList.contains('hidden')) {
+        searchInput.focus();
+    }
+});
+
+// Search input keypress
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        performSearch(searchInput.value.trim());
+        searchBar.classList.add('hidden'); // Hide search bar after search
+        searchInput.value = ''; // Clear search input
+    }
+});
+
+// Description overlay close button
+modalCloseButton.addEventListener('click', hideDetailsOverlay);
+// Close overlay if clicked outside modal content
+descriptionOverlay.addEventListener('click', (e) => {
+    if (e.target === descriptionOverlay) {
+        hideDetailsOverlay();
+    }
+});
+
+// My List button in modal
+modalMyListButton.addEventListener('click', () => {
+    if (!currentDetailedItem) return;
+
+    // Use both IMDb and TMDB ID for robustness
+    const isAdded = isItemInMyList(currentDetailedItem.imdbID, currentDetailedItem.tmdbId);
+    if (isAdded) {
+        removeItemFromMyList(currentDetailedItem.imdbID, currentDetailedItem.tmdbId);
+    } else {
+        addItemToMyList(currentDetailedItem);
+    }
+});
+
+// Season selection in modal
+seasonSelect.addEventListener('change', (e) => {
+    if (currentDetailedItem && currentDetailedItem.tmdbId) {
+        loadEpisodesForSeason(currentDetailedItem.tmdbId, e.target.value);
+    }
+});
+
+// Scroll arrow functionality for content rows
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('scroll-arrow')) {
+        const rowId = e.target.dataset.target;
+        const row = document.getElementById(rowId);
+        if (row) {
+            const scrollAmount = row.clientWidth * 0.8; // Scroll 80% of row width
+            if (e.target.classList.contains('right')) {
+                row.scrollBy({ left: scrollAmount, behavior: 'smooth' });
             } else {
-                searchInput.value = '';
+                row.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
             }
-        });
+        }
+    }
+});
 
-        // Toggle mobile search overlay
-        document.getElementById('search-toggle-btn-mobile')?.addEventListener('click', () => {
-            if (mobileSearchOverlay) {
-                mobileSearchOverlay.classList.add('active');
-                mobileSearchOverlay.style.display = 'flex';
-                document.body.classList.add('overflow-hidden');
-                mobileSearchInput?.focus();
-            }
-        });
+// Handle browser back/forward buttons
+window.addEventListener('popstate', (event) => {
+    if (event.state && event.state.page) {
+        navigateTo(event.state.page, false); // Don't push state again
+    } else {
+        // Default to home if no specific state, e.g., on initial load or if directly visiting root URL
+        navigateTo('home-page', false);
+    }
+});
 
-        // Close mobile search overlay
-        document.querySelector('#mobile-search-overlay .close-search-btn')?.addEventListener('click', () => {
-            if (mobileSearchOverlay) {
-                mobileSearchOverlay.classList.remove('active');
-                setTimeout(() => {
-                    mobileSearchOverlay.style.display = 'none';
-                    document.body.classList.remove('overflow-hidden');
-                    mobileSearchInput.value = '';
-                    mobileSearchResultsGrid.innerHTML = '';
-                }, 300);
-            }
-        });
+// --- Initial Load ---
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('DOM Content Loaded. Initializing app...');
+    currentUserIdSpan.textContent = currentUserId; // Set user ID on load
 
-
-        // Debounce search input for both desktop and mobile
-        const handleSearchInput = (event) => {
-            clearTimeout(searchTimeout);
-            const query = event.target.value.trim();
-            searchTimeout = setTimeout(() => {
-                if (query.length > 2) {
-                    handleSearch(query, event.target.id === 'mobile-search-input');
-                } else if (query.length === 0) {
-                    // If search box is empty, go back to home content or clear search results
-                    if (document.getElementById('search-results-section')) {
-                         document.getElementById('search-results-section').classList.add('hidden');
-                    }
-                    if (mobileSearchResultsGrid) {
-                        mobileSearchResultsGrid.innerHTML = '';
-                        mobileSearchNoResults.classList.add('hidden');
-                    }
-                    // Only reload home if on search page and query is empty, otherwise stay on current page
-                    if (window.innerWidth >= 768 && document.getElementById('search-results-section') && !document.getElementById('search-results-section').classList.contains('hidden')) {
-                        loadContent('home');
-                    }
-                }
-            }, 300); // 300ms debounce time
-        };
-
-        searchInput.addEventListener('input', handleSearchInput);
-        mobileSearchInput?.addEventListener('input', handleSearchInput);
+    // Load My List data first to ensure isItemInMyList works correctly
+    try {
+        const userList = await apiRequest(`/api/mylist/${currentUserId}`);
+        myListArr = userList.items || [];
+    } catch (error) {
+        console.error("Failed to pre-load My List on DOMContentLoaded:", error);
+        myListArr = []; // Ensure it's an empty array on error
     }
 
-    /**
-     * Handles the search logic.
-     * @param {string} query - The search query.
-     * @param {boolean} isMobileSearch - True if the search is from the mobile overlay.
-     */
-    const handleSearch = async (query, isMobileSearch) => {
-        showLoading();
-        movieSectionsContainer.innerHTML = ''; // Clear home content
-        heroSection.classList.add('hidden-hero'); // Hide hero
-        clearInterval(heroInterval); // Stop hero carousel
-
-        const searchResultsSection = document.getElementById('search-results-section');
-        const searchResultsGrid = document.getElementById('search-results-grid');
-        const allContentView = document.getElementById('all-content-view');
-
-        // Manage visibility based on where the search is performed
-        if (!isMobileSearch) {
-            if (searchResultsSection) searchResultsSection.classList.remove('hidden');
-            if (searchResultsGrid) searchResultsGrid.innerHTML = ''; // Clear previous desktop results
-        } else {
-            // Mobile search overlay handles its own grid
-            if (mobileSearchResultsGrid) mobileSearchResultsGrid.innerHTML = '';
-            if (mobileSearchNoResults) mobileSearchNoResults.classList.add('hidden');
-        }
-        if (allContentView) allContentView.classList.add('hidden'); // Hide other full view
-
-        try {
-            const searchResults = await fetchData(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
-            const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
-            const filteredResults = allResults.filter(item => isValidPosterUrl(item.poster));
-
-            const targetGrid = isMobileSearch ? mobileSearchResultsGrid : searchResultsGrid;
-            const targetNoResults = isMobileSearch ? mobileSearchNoResults : null; // Desktop uses its own grid messages
-
-            if (filteredResults.length > 0) {
-                filteredResults.forEach(item => {
-                    if (item.imdbID && item.type) {
-                        targetGrid.appendChild(createMovieCard(item));
-                    }
-                });
-                if (targetNoResults) targetNoResults.classList.add('hidden');
-            } else {
-                targetGrid.innerHTML = ''; // Ensure grid is empty
-                if (targetNoResults) {
-                    targetNoResults.classList.remove('hidden');
-                    targetNoResults.textContent = `No results found for "${query}".`;
-                } else {
-                    // For desktop, put message directly into grid if no results
-                    if (searchResultsGrid) searchResultsGrid.innerHTML = `<p class="text-gray-400 p-4">No results found for "${query}" with valid images.</p>`;
-                }
-            }
-            // Pagination for search results is not implemented yet, so hide buttons
-            document.getElementById('search-pagination')?.classList.add('hidden');
-        } catch (error) {
-            const targetGrid = isMobileSearch ? mobileSearchResultsGrid : searchResultsGrid;
-            const targetNoResults = isMobileSearch ? mobileSearchNoResults : null;
-
-            if (targetGrid) targetGrid.innerHTML = `<p class="text-red-500 p-4">Error performing search for "${query}". Please try again later.</p>`;
-            if (targetNoResults) targetNoResults.classList.remove('hidden');
-            console.error('Search error:', error);
-        } finally {
-            hideLoading();
-        }
-    };
-
-
-    // Hero carousel navigation
-    if (heroNextBtn) heroNextBtn.addEventListener('click', nextSlide);
-    if (heroPrevBtn) heroPrevBtn.addEventListener('click', prevSlide);
-
-    // --- Initial Content Load ---
-
-    /**
-     * Loads content based on the specified type (home, movies, series, mylist).
-     * Now includes progressive loading for home page.
-     * @param {string} contentType - The type of content to load.
-     */
-    const loadContent = async (contentType) => {
-        showLoading();
-        movieSectionsContainer.innerHTML = ''; // Clear previous content
-
-        const searchResultsSection = document.getElementById('search-results-section');
-        const allContentView = document.getElementById('all-content-view');
-
-        // Hide search results and all content view sections
-        if (searchResultsSection) searchResultsSection.classList.add('hidden');
-        if (allContentView) allContentView.classList.add('hidden');
-
-        // Close search inputs/overlays if they are open
-        if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
-            searchInputWrapper.classList.add('hidden');
-            searchInput.value = '';
-        }
-        if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
-            mobileSearchOverlay.classList.remove('active');
-            mobileSearchOverlay.style.display = 'none';
-            document.body.classList.remove('overflow-hidden'); // Re-enable scrolling
-            mobileSearchInput.value = '';
-            mobileSearchResultsGrid.innerHTML = '';
-        }
-
-        // Handle hero section visibility
-        if (heroSection) {
-            if (contentType !== 'home') {
-                heroSection.classList.add('hidden-hero');
-                clearInterval(heroInterval);
-                console.log('Hero section is being hidden for non-home page.');
-            } else {
-                heroSection.classList.remove('hidden-hero');
-                // Fetch hero movies first for immediate display
-                await fetchHeroMovies(); // Await ensures hero is loaded before other sections
-                console.log('Hero section is being shown for home page.');
-            }
-        }
-
-        // Always fetch latest My List status before rendering content
-        await fetchMyListStatus();
-
-        try {
-            if (contentType === 'home') {
-                // Load other sections progressively
-                const homeSectionEndpoints = [
-                    { title: 'Most Popular Movies', endpoint: `${API_BASE_URL}/movies/popular` },
-                    { title: 'Best Series', endpoint: `${API_BASE_URL}/series/best` },
-                    { title: 'Most Popular Series', endpoint: `${API_BASE_URL}/series/popular` },
-                    { title: 'Action Movies', endpoint: `${API_BASE_URL}/movies/genre/Action` }, // Capitalized genres for consistency
-                    { title: 'Comedy Films', endpoint: `${API_BASE_URL}/movies/genre/Comedy` },
-                    { title: 'Drama Series', endpoint: `${API_BASE_URL}/series/genre/Drama` },
-                    { title: 'Animation Series', endpoint: `${API_BASE_URL}/series/genre/Animation` },
-                    { title: 'Horror Films', endpoint: `${API_BASE_URL}/movies/genre/Horror` },
-                    { title: 'Fantasy Movies', endpoint: `${API_BASE_URL}/movies/genre/Fantasy` },
-                    { title: 'Crime Series', endpoint: `${API_BASE_URL}/series/genre/Crime` }
-                ];
-
-                for (const section of homeSectionEndpoints) {
-                    await fetchAndDisplaySection(section.title, section.endpoint);
-                }
-
-            } else if (contentType === 'movies') {
-                await fetchAndDisplaySection('All Movies', `${API_BASE_URL}/movies`, true);
-            } else if (contentType === 'series') {
-                await fetchAndDisplaySection('All Series', `${API_BASE_URL}/series`, true);
-            } else if (contentType === 'mylist') {
-                // My list data is already fetched by fetchMyListStatus()
-                const mylistSection = document.createElement('div');
-                mylistSection.className = 'movie-section mb-8';
-                mylistSection.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">My List</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
-                const mylistGrid = mylistSection.querySelector('.movie-grid-category');
-                movieSectionsContainer.appendChild(mylistSection); // Append immediately
-
-                if (userMyList && userMyList.length > 0) {
-                    const filteredMyListItems = userMyList.filter(item => isValidPosterUrl(item.poster));
-
-                    if (filteredMyListItems.length > 0) {
-                        filteredMyListItems.forEach(item => {
-                            const card = createMovieCard(item);
-                            // Override card's hover buttons to only show remove on My List page
-                            const cardButtons = card.querySelector('.movie-card-buttons');
-                            if (cardButtons) {
-                                cardButtons.innerHTML = `
-                                    <button class="bg-red-600 text-white p-2 rounded-full text-lg flex items-center justify-center hover:bg-red-700 transition-colors"
-                                        title="Remove ${item.title} from My List" data-imdb-id="${item.imdbID}">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                    <button class="bg-gray-700 text-white p-2 rounded-full text-lg flex items-center justify-center hover:bg-gray-600 transition-colors"
-                                        title="More info on ${item.title}" data-imdb-id="${item.imdbID}" data-type="${item.type}">
-                                        <i class="fas fa-info-circle"></i>
-                                    </button>
-                                `;
-                                // Re-attach event listeners for these specific buttons
-                                card.querySelector('.bg-red-600')?.addEventListener('click', (e) => {
-                                    e.stopPropagation();
-                                    removeFromMyList(e.currentTarget.dataset.imdbId); // No keepCurrentView true, will reload page
-                                });
-                                card.querySelector('.bg-gray-700')?.addEventListener('click', (e) => {
-                                    e.stopPropagation();
-                                    showDetailsOverlay(e.currentTarget.dataset.imdbId, e.currentTarget.dataset.type);
-                                });
-                            }
-                            mylistGrid.appendChild(card);
-                        });
-                    } else {
-                        mylistGrid.innerHTML = `<p class="text-lg text-gray-400 p-4">Your list is empty or contains no items with valid images.</p>`;
-                    }
-                } else {
-                    mylistGrid.innerHTML = `<p class="text-lg text-gray-400 p-4">Your list is empty. Add movies or series to your list!</p>`;
-                }
-            }
-        } catch (error) {
-            console.error(`Error loading ${contentType} content:`, error);
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'movie-section p-4 md:p-8 pt-20 text-center text-red-500';
-            errorDiv.innerHTML = `<p>Error loading ${contentType} content. Please try again later.</p>`;
-            movieSectionsContainer.appendChild(errorDiv);
-        } finally {
-            hideLoading();
-        }
-    };
-
-    // Load home content initially
-    loadContent('home');
+    // Check URL hash for initial page load
+    const initialHash = window.location.hash.replace('#', '');
+    if (initialHash && document.getElementById(`${initialHash}-page`)) {
+        navigateTo(`${initialHash}-page`, false); // Don't push state if already in hash
+    } else {
+        navigateTo('home-page');
+    }
 });

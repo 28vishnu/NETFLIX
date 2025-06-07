@@ -1,32 +1,24 @@
-// models/Series.js
+// Filename: models/Series.js
 const mongoose = require('mongoose');
 
 const seriesSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    year: String,
+    // IMDb ID remains for consistency with frontend and user list
     imdbID: { type: String, required: true, unique: true },
-    type: String,
-    poster: String,
-    plot: String,
-    genre: [String], // Stored as an array of strings
-    director: String,
-    actors: String,
-    writer: String,
-    language: String,
-    country: String,
-    awards: String,
-    imdbRating: String,
-    rated: String,
-    totalSeasons: String, // Specific for series
-    runtime: String,
-    boxOffice: String,
-    dvd: String,
-    imdbVotes: String,
-    metascore: String,
-    production: String,
-    ratings: Array, // Array of objects
-    website: String,
-    telegramPlayableUrl: { type: String, default: null } // <--- ADD THIS LINE
-});
+    // New: TMDB ID for direct lookups on TMDB
+    tmdbId: { type: Number, unique: true, sparse: true },
+
+    title: { type: String, required: true }, // TMDB uses 'name' for series
+    plot: { type: String },
+    poster: { type: String }, // URL to poster image
+    backdrop: { type: String }, // URL to backdrop image (for hero section)
+    year: { type: String }, // First air year
+    genre: { type: [String] }, // Array of genre names
+    totalSeasons: { type: String }, // e.g., "5"
+    actors: { type: String },
+    // Using TMDB's vote_average as a substitute for IMDb Rating
+    imdbRating: { type: String },
+    telegramPlayableUrl: { type: String, default: '' }, // Link to playable video
+    type: { type: String, default: 'series' }
+}, { timestamps: true });
 
 module.exports = mongoose.model('Series', seriesSchema);
