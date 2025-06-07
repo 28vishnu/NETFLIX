@@ -66,7 +66,8 @@
             </div>
     </section>
 
-    <main class="flex-grow p-4 md:p-8 lg:p-12 mt-[-80px] md:mt-[-100px] relative z-20">
+    <!-- Corrected margin-top to prevent overlap with hero section -->
+    <main class="flex-grow p-4 md:p-8 lg:p-12 relative z-20">
         <div id="loading-indicator" class="text-center text-gray-400 text-lg py-10 hidden">
             <i class="fas fa-spinner fa-spin mr-2"></i> Loading content...
         </div>
@@ -115,6 +116,22 @@
             <span>My List</span>
         </a>
     </nav>
+
+    <!-- Mobile Search Overlay - Hidden by default -->
+    <div id="mobile-search-overlay" class="fixed inset-0 bg-black bg-opacity-95 z-[1000] hidden flex-col items-center pt-8">
+        <div class="search-header flex w-full max-w-md px-4 mb-4">
+            <input type="text" id="mobile-search-input" placeholder="Search for movies or TV shows..." class="flex-grow bg-gray-800 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600">
+            <button class="close-search-btn text-white text-3xl ml-4">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="mobile-search-results" class="search-results-container w-full max-w-md overflow-y-auto pb-4 px-4">
+            <!-- Search results will be injected here -->
+            <div id="mobile-search-results-grid" class="movie-grid-category"></div>
+            <p id="mobile-search-no-results" class="text-gray-400 text-center mt-4 hidden">No results found.</p>
+        </div>
+    </div>
+
 
     <div id="detail-overlay" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] hidden p-4">
         <div class="relative bg-[#1a1a1a] rounded-lg shadow-xl overflow-hidden w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row">

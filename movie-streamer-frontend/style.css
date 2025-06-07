@@ -81,8 +81,8 @@ body {
     margin-top: -64px; /* Adjust for header height to make it full-bleed */
     padding-top: 64px; /* Push content down to compensate for negative margin */
     display: flex; /* Ensure flex for centering/positioning slides */
-    align-items: center; /* Vertically center content if needed */
-    justify-content: center; /* Horizontally center content if needed */
+    align-items: end; /* Align text content to the bottom */
+    justify-content: start; /* Align text content to the left */
     transition: opacity 0.5s ease-in-out, height 0.5s ease-in-out, min-height 0.5s ease-in-out, padding-top 0.5s ease-in-out, margin-top 0.5s ease-in-out; /* Smooth hide/show */
 }
 #hero-section.hidden-hero {
@@ -125,7 +125,6 @@ body {
     flex-shrink: 0;
     width: 100%;
     height: 100%;
-    /* Removed background-image properties from here, handled by #hero-section::before */
     position: relative;
     display: flex;
     align-items: flex-end; /* Align text content to the bottom */
@@ -179,7 +178,7 @@ body {
 .hero-dots-container {
     position: absolute;
     bottom: 1rem;
-    left: 50%;
+    left: 1/2; /* Changed to left 50% in JS */
     transform: translateX(-50%);
     display: flex;
     gap: 0.5rem;
@@ -243,6 +242,50 @@ body {
     color: #a0aec0;
 }
 
+/* New: Buttons on movie card hover */
+.movie-card-buttons {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10; /* Ensure buttons are above info text if overlapping */
+}
+
+.movie-card-container:hover .movie-card-buttons {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1); /* Slight scale for effect */
+}
+
+.movie-card-buttons button {
+    background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent background */
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.5); /* Subtle white border */
+    border-radius: 50%; /* Circular buttons */
+    width: 2.5rem; /* Fixed size */
+    height: 2.5rem; /* Fixed size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.movie-card-buttons button:hover {
+    background-color: rgba(255, 255, 255, 0.2); /* Lighter on hover */
+    border-color: white; /* Stronger border on hover */
+    transform: scale(1.1); /* Slightly enlarge on hover */
+}
+
+/* Specific style for "My List" add/remove button on card */
+.movie-card-buttons .mylist-toggle-btn.added {
+    background-color: rgba(229, 9, 20, 0.8); /* Netflix Red */
+    border-color: #e50914;
+}
 
 /* Detail Overlay */
 .detail-overlay {
@@ -251,7 +294,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.95);
+    background-color: rgba(0, 0, 0, 0.95); /* More opaque background */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -281,7 +324,7 @@ body {
 
 /* Close button for detail overlay - Positioning adjusted for mobile */
 .detail-overlay-content .close-overlay-btn {
-    background: #e50914;
+    background: #1a1a1a; /* Match overlay background */
     border: none;
     color: white;
     font-size: 2rem;
@@ -298,10 +341,11 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Subtle shadow */
 }
 
 .detail-overlay-content .close-overlay-btn:hover {
-    background-color: #c11119;
+    background-color: #333; /* Darker on hover */
 }
 
 /* Loading Indicator Styling */

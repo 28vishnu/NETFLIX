@@ -28,8 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const videoPlayerOverlay = document.getElementById('video-player-overlay');
     const moviePlayer = document.getElementById('movie-player');
     const closePlayerBtn = document.getElementById('close-player-btn');
-    const bufferingSpinner = document.getElementById('buffering-spinner'); // Get the buffering spinner
-
+    const bufferingSpinner = document.getElementById('buffering-spinner');
+    const mobileSearchOverlay = document.getElementById('mobile-search-overlay'); // New: mobile search overlay
+    const mobileSearchInput = document.getElementById('mobile-search-input'); // New: mobile search input
+    const mobileSearchResultsGrid = document.getElementById('mobile-search-results-grid'); // New: mobile search results grid
+    const mobileSearchNoResults = document.getElementById('mobile-search-no-results'); // New: mobile search no results message
 
     // --- Global Variables ---
     let currentHeroSlide = 0;
@@ -38,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let userId = localStorage.getItem('netflixCloneUserId');
     let heroMoviesData = [];
     let searchTimeout; // For debouncing search input
+    let userMyList = []; // Array to hold user's My List items for quick lookups
 
     // Generate a unique user ID if one doesn't exist (for My List persistence)
     if (!userId) {
@@ -182,26 +186,65 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
+     * Checks if an item is in the user's My List.
+     * @param {string} imdbId - The IMDb ID of the item.
+     * @returns {boolean} True if the item is in My List, false otherwise.
+     */
+    const isItemInMyList = (imdbId) => {
+        return userMyList.some(item => item.imdbID === imdbId);
+    };
+
+    /**
+     * Fetches and updates the user's My List.
+     */
+    const fetchMyListStatus = async () => {
+        try {
+            const response = await fetchData(`${API_BASE_URL}/mylist/${userId}`);
+            userMyList = response.items || [];
+            console.log('My List status updated:', userMyList);
+        } catch (error) {
+            console.error('Error fetching My List status:', error);
+            userMyList = []; // Reset to empty on error
+        }
+    };
+
+
+    /**
      * Creates a movie/series card element.
-     * Uses data-src for lazy loading images.
+     * Includes play and info buttons on hover.
      * @param {object} item - The movie/series data object.
      * @returns {HTMLElement} The created movie card div.
      */
     const createMovieCard = (item) => {
         const card = document.createElement('div');
-        card.className = 'movie-card-container relative flex-shrink-0 w-32 md:w-40 lg:w-48 rounded-md overflow-hidden cursor-pointer';
-        card.dataset.imdbId = item.imdbID;
-        card.dataset.type = item.type;
+        card.className = 'movie-card-container relative flex-shrink-0 w-32 md:w-40 lg:w-48 rounded-md overflow-hidden cursor-pointer group'; // Added 'group' class
 
         const posterUrl = isValidPosterUrl(item.poster) ? item.poster : `https://placehold.co/300x450/000000/FFFFFF?text=${encodeURIComponent(item.title || 'No Title')}`;
 
-        // Use data-src for lazy loading, initial src can be a tiny placeholder or empty
+        // Determine initial My List button state
+        const isInList = isItemInMyList(item.imdbID);
+        const myListIcon = isInList ? 'fas fa-check' : 'fas fa-plus';
+        const myListBtnClass = isInList ? 'mylist-toggle-btn added' : 'mylist-toggle-btn';
+        const myListBtnTitle = isInList ? `Remove ${item.title} from My List` : `Add ${item.title} to My List`;
+
+
         card.innerHTML = `
             <img data-src="${posterUrl}" alt="${item.title || 'No Title'} Poster" class="w-full h-48 md:h-60 lg:h-72 object-cover rounded-md lazy-load-img"
                  onerror="this.onerror=null;this.src='https://placehold.co/300x450/000000/FFFFFF?text=Image+Missing'; console.error('Image failed to load for: ${item.title || 'No Title'} (${item.imdbID || 'N/A'}) - Original URL: ${item.poster || 'N/A'}');">
             <div class="movie-card-info">
                 <h3 class="text-sm md:text-base font-semibold truncate">${item.title || 'No Title'}</h3>
                 <p class="text-xs text-gray-400">${item.year || 'N/A'}</p>
+            </div>
+            <div class="movie-card-buttons absolute hidden group-hover:flex">
+                <button class="play-small-btn" data-imdb-id="${item.imdbID}" data-type="${item.type}" data-playable-url="${item.telegramPlayableUrl || ''}" title="Play ${item.title}">
+                    <i class="fas fa-play"></i>
+                </button>
+                <button class="${myListBtnClass}" data-imdb-id="${item.imdbID}" data-title="${item.title}" data-poster="${item.poster}" data-type="${item.type}" data-year="${item.year}" title="${myListBtnTitle}">
+                    <i class="${myListIcon}"></i>
+                </button>
+                <button class="info-small-btn" data-imdb-id="${item.imdbID}" data-type="${item.type}" title="More info on ${item.title}">
+                    <i class="fas fa-info-circle"></i>
+                </button>
             </div>
         `;
 
@@ -211,8 +254,42 @@ document.addEventListener('DOMContentLoaded', () => {
             lazyLoadObserver.observe(imgElement);
         }
 
+        // Add event listeners for the new buttons on the card
+        card.querySelector('.play-small-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent card click from opening detail overlay
+            const urlToPlay = e.currentTarget.dataset.playableUrl;
+            if (urlToPlay && urlToPlay !== 'null') { // Ensure url is not "null" string
+                playMovie(urlToPlay);
+            } else {
+                showMessageBox(`No playable link available for ${item.title || 'this content'}.`, 'info');
+            }
+        });
+
+        card.querySelector('.info-small-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent card click from opening detail overlay
+            showDetailsOverlay(item.imdbID, item.type);
+        });
+
+        card.querySelector('.mylist-toggle-btn')?.addEventListener('click', async (e) => {
+            e.stopPropagation(); // Prevent card click from opening detail overlay
+            const btn = e.currentTarget;
+            const itemImdbID = btn.dataset.imdbId;
+            const itemTitle = btn.dataset.title;
+            const itemPoster = btn.dataset.poster;
+            const itemType = btn.dataset.type;
+            const itemYear = btn.dataset.year;
+
+            if (isItemInMyList(itemImdbID)) {
+                await removeFromMyList(itemImdbID, true); // Pass true to indicate card update
+            } else {
+                await addToMyList({ imdbID: itemImdbID, title: itemTitle, poster: itemPoster, type: itemType, year: itemYear }, true); // Pass true to indicate card update
+            }
+            // The card's state will be updated by refreshMyListAndUI
+        });
+
+        // The main card click listener (for background image area, or if buttons not clicked)
         card.addEventListener('click', () => {
-            showDetailsOverlay(card.dataset.imdbId, card.dataset.type);
+            showDetailsOverlay(item.imdbID, item.type);
         });
 
         return card;
@@ -249,11 +326,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 itemsToDisplay = data;
             }
 
+            // Filter for items with valid posters. Backend now tries to return valid posters.
             const filteredItems = itemsToDisplay.filter(item => isValidPosterUrl(item.poster));
 
             if (filteredItems && filteredItems.length > 0) {
                 filteredItems.forEach(item => {
-                    if (item.imdbID && item.type) {
+                    if (item.imdbID && item.type) { // Ensure basic identifiers exist
                         const card = createMovieCard(item);
                         if (!isGridCategory) {
                             card.classList.add('scroll-snap-start');
@@ -278,17 +356,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const showDetailsOverlay = async (imdbId, type) => {
         showLoading();
         try {
-            const endpoint = `${API_BASE_URL}/${type}s/${imdbId}`;
-            const data = await fetchData(endpoint);
+            // First try to get it from local list if available and then fetch details
+            const localItem = userMyList.find(item => item.imdbID === imdbId && item.type === type);
+            let data = null;
+
+            if (localItem && localItem.plot && localItem.director) { // Basic check if local item has enough detail
+                data = localItem;
+                console.log('Using local item data for detail overlay:', localItem);
+            } else {
+                const endpoint = `${API_BASE_URL}/${type}s/${imdbId}`;
+                data = await fetchData(endpoint);
+                console.log('Fetched fresh data for detail overlay:', data);
+            }
+
 
             if (data) {
                 const overlayPosterUrl = isValidPosterUrl(data.poster) ? data.poster : `https://placehold.co/400x600/000000/FFFFFF?text=No+Image`;
 
+                // Update My List button state dynamically
+                const isInList = isItemInMyList(data.imdbID);
+                const myListIconClass = isInList ? 'fas fa-check' : 'fas fa-plus';
+                const myListText = isInList ? 'In My List' : 'My List';
+
                 const playableUrl = data.telegramPlayableUrl;
                 let playButtonHtml = '';
-                if (playableUrl) {
+                if (playableUrl && playableUrl !== 'null') { // Ensure url is not "null" string
                     playButtonHtml = `
-                        <button id="detail-play-btn" class="bg-white text-black px-6 py-3 rounded-md font-semibold hover:bg-gray-300 transition-colors flex items-center justify-center w-full" data-playable-url="${playableUrl}">
+                        <button id="detail-play-btn" class="bg-white text-black px-6 py-3 rounded-md font-semibold hover:bg-gray-300 transition-colors flex items-center justify-center w-full play-btn" data-playable-url="${playableUrl}">
                             <i class="fas fa-play mr-2"></i> Play
                         </button>
                     `;
@@ -316,8 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <p class="mb-4 text-base">${data.plot || 'No plot available.'}</p>
                             <div class="flex flex-col space-y-4 mb-6">
                                 ${playButtonHtml}
-                                <button class="add-to-list-btn bg-gray-700 text-white px-6 py-3 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center justify-center w-full" data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
-                                    <i class="fas fa-plus mr-2"></i> My List
+                                <button id="detail-my-list-btn" class="bg-gray-700 text-white px-6 py-3 rounded-md font-semibold hover:bg-gray-600 transition-colors flex items-center justify-center w-full add-to-list-btn"
+                                    data-imdb-id="${data.imdbID}" data-title="${data.title}" data-poster="${data.poster}" data-type="${data.type}" data-year="${data.year}">
+                                    <i class="${myListIconClass} mr-2"></i> <span>${myListText}</span>
                                 </button>
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm mb-6">
@@ -349,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (detailPlayBtn && !detailPlayBtn.disabled) {
                     detailPlayBtn.addEventListener('click', () => {
                         const urlToPlay = detailPlayBtn.dataset.playableUrl;
-                        if (urlToPlay) {
+                        if (urlToPlay && urlToPlay !== 'null') {
                             playMovie(urlToPlay);
                         } else {
                             showMessageBox('No playable link available for this content.', 'info');
@@ -357,7 +452,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
 
-                const addToListBtn = detailOverlayContainer.querySelector('.add-to-list-btn');
+                const addToListBtn = detailOverlayContainer.querySelector('#detail-my-list-btn');
                 if (addToListBtn) {
                     addToListBtn.addEventListener('click', async (e) => {
                         const itemToAdd = {
@@ -367,7 +462,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             type: e.currentTarget.dataset.type,
                             year: e.currentTarget.dataset.year
                         };
-                        await addToMyList(itemToAdd);
+                        if (isItemInMyList(itemToAdd.imdbID)) {
+                            await removeFromMyList(itemToAdd.imdbID);
+                        } else {
+                            await addToMyList(itemToAdd);
+                        }
+                        // Refresh the button state after action
+                        const updatedIsInList = isItemInMyList(itemToAdd.imdbID);
+                        addToListBtn.querySelector('i').className = updatedIsInList ? 'fas fa-check mr-2' : 'fas fa-plus mr-2';
+                        addToListBtn.querySelector('span').textContent = updatedIsInList ? 'In My List' : 'My List';
                     });
                 }
 
@@ -411,19 +514,23 @@ document.addEventListener('DOMContentLoaded', () => {
             videoPlayerOverlay.style.display = 'flex';
             document.body.classList.add('overflow-hidden');
 
-            // Hide spinner once iframe content starts loading (or after a short delay)
-            // Note: iframe onload might not always fire reliably or be indicative of video buffer
-            moviePlayer.onload = () => {
-                bufferingSpinner.classList.add('hidden');
-                moviePlayer.onload = null; // Remove handler
-            };
-
-            // Fallback: hide spinner after a short delay if onload doesn't fire or is too slow
-            setTimeout(() => {
+            // Set a timeout to hide the spinner, as iframe onload is not reliable for video buffering
+            const spinnerTimeout = setTimeout(() => {
                 if (!bufferingSpinner.classList.contains('hidden')) {
                     bufferingSpinner.classList.add('hidden');
+                    console.log('Buffering spinner hidden by timeout.');
                 }
             }, 3000); // Hide after 3 seconds if not already hidden
+
+            // Optional: You could listen for messages from the iframe if it sends playback events,
+            // but for external embeds, this is often not feasible.
+            // window.addEventListener('message', (event) => {
+            //     if (event.origin === 'https://www.youtube.com' && event.data.event === 'onReady') {
+            //         bufferingSpinner.classList.add('hidden');
+            //         clearTimeout(spinnerTimeout);
+            //     }
+            // });
+
         } else {
             showMessageBox('Video player not available.', 'error');
         }
@@ -466,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await fetchData(`${API_BASE_URL}/movies/trending`);
 
             if (data && data.length > 0) {
-                heroMoviesData = data.filter(item => isValidPosterUrl(item.poster)).slice(0, 5);
+                heroMoviesData = data.filter(item => isValidPosterUrl(item.poster) && isValidPosterUrl(item.backdrop)).slice(0, 5); // Ensure backdrop exists for hero
 
                 if (heroMoviesData.length > 0) {
                     console.log(`Found ${heroMoviesData.length} valid trending movies for hero section.`);
@@ -477,9 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const slide = document.createElement('div');
                         slide.className = 'hero-slide';
 
-                        // Use a tiny placeholder or empty src and data-src for hero images if they are also lazy-loaded
-                        // For hero, we want it to load quickly, so direct src is better for the first slide
-                        const heroPosterUrl = isValidPosterUrl(movie.poster) ? movie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image';
+                        const heroPosterUrl = isValidPosterUrl(movie.backdrop) ? movie.backdrop : (isValidPosterUrl(movie.poster) ? movie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image');
 
                         slide.innerHTML = `
                             <div class="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent"></div>
@@ -490,8 +595,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <button class="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-gray-300 transition-colors flex items-center play-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}" data-title="${movie.title}" data-playable-url="${movie.telegramPlayableUrl || ''}">
                                         <i class="fas fa-play mr-2"></i> Play
                                     </button>
-                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center add-to-list-btn" data-imdb-id="${movie.imdbID}" data-title="${movie.title}" data-poster="${movie.poster}" data-type="${movie.type}" data-year="${movie.year}">
-                                        <i class="fas fa-plus mr-2"></i> My List
+                                    <button class="bg-gray-700 text-white px-6 py-3 rounded-full font-semibold hover:bg-gray-600 transition-colors flex items-center info-btn" data-imdb-id="${movie.imdbID}" data-type="${movie.type}">
+                                        <i class="fas fa-info-circle mr-2"></i> More Info
                                     </button>
                                 </div>
                             </div>
@@ -510,25 +615,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     heroSlidesContainer.querySelectorAll('.play-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
                             const urlToPlay = e.currentTarget.dataset.playableUrl;
-                            if (urlToPlay) {
+                            if (urlToPlay && urlToPlay !== 'null') {
                                 playMovie(urlToPlay);
                             } else {
                                 showMessageBox(`No playable link available for ${e.currentTarget.dataset.title || 'this content'}.`, 'info');
                             }
                         });
                     });
-                    heroSlidesContainer.querySelectorAll('.add-to-list-btn').forEach(btn => {
-                        btn.addEventListener('click', async (e) => {
-                            const itemToAdd = {
-                                imdbID: e.currentTarget.dataset.imdbId,
-                                title: e.currentTarget.dataset.title,
-                                poster: e.currentTarget.dataset.poster,
-                                type: e.currentTarget.dataset.type,
-                                year: e.currentTarget.dataset.year
-                            };
-                            await addToMyList(itemToAdd);
+                    heroSlidesContainer.querySelectorAll('.info-btn').forEach(btn => { // Added info button listener
+                        btn.addEventListener('click', (e) => {
+                            showDetailsOverlay(e.currentTarget.dataset.imdbId, e.currentTarget.dataset.type);
                         });
                     });
+
 
                     if (heroPrevBtn) heroPrevBtn.style.display = 'flex';
                     if (heroNextBtn) heroNextBtn.style.display = 'flex';
@@ -582,7 +681,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (heroMoviesData.length > 0 && heroSection) {
             const currentHeroMovie = heroMoviesData[currentHeroSlide];
-            const currentHeroImageUrl = isValidPosterUrl(currentHeroMovie.poster) ? currentHeroMovie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image';
+            // Prefer backdrop for hero, fall back to poster
+            const currentHeroImageUrl = isValidPosterUrl(currentHeroMovie.backdrop) ? currentHeroMovie.backdrop : (isValidPosterUrl(currentHeroMovie.poster) ? currentHeroMovie.poster : 'https://placehold.co/1920x1080/000000/FFFFFF?text=No+Hero+Image');
             heroSection.style.setProperty('--hero-bg-image', `url('${currentHeroImageUrl}')`);
         }
     };
@@ -608,7 +708,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- My List Functions ---
-    const addToMyList = async (item) => {
+    /**
+     * Adds an item to the user's My List.
+     * @param {object} item - The item to add.
+     * @param {boolean} [isFromCard=false] - True if called from a movie card, to avoid full page refresh.
+     */
+    const addToMyList = async (item, isFromCard = false) => {
         try {
             const response = await fetch(`${API_BASE_URL}/mylist/add`, {
                 method: 'POST',
@@ -618,6 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             if (response.ok) {
                 showMessageBox(result.message || 'Item added to My List!', 'success');
+                await refreshMyListAndUI(isFromCard);
             } else {
                 showMessageBox(result.message || 'Failed to add item to My List.', 'error');
             }
@@ -627,7 +733,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const removeFromMyList = async (imdbID) => {
+    /**
+     * Removes an item from the user's My List.
+     * @param {string} imdbID - The IMDb ID of the item to remove.
+     * @param {boolean} [isFromCard=false] - True if called from a movie card, to avoid full page refresh.
+     */
+    const removeFromMyList = async (imdbID, isFromCard = false) => {
         try {
             const response = await fetch(`${API_BASE_URL}/mylist/remove`, {
                 method: 'POST',
@@ -637,15 +748,49 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await response.json();
             if (response.ok) {
                 showMessageBox(result.message || 'Item removed from My List!', 'success');
-                if (document.querySelector('.nav-link.active')?.dataset.content === 'mylist') {
-                    loadContent('mylist');
-                }
+                await refreshMyListAndUI(isFromCard);
             } else {
                 showMessageBox(result.message || 'Failed to remove item from My List.', 'error');
             }
         } catch (error) {
             console.error('Error removing from My List:', error);
             showMessageBox('Error removing from My List. Please try again.', 'error');
+        }
+    };
+
+    /**
+     * Refreshes the user's My List data and updates the UI accordingly.
+     * @param {boolean} [keepCurrentView=false] - If true, only updates card buttons without reloading the whole page.
+     */
+    const refreshMyListAndUI = async (keepCurrentView = false) => {
+        await fetchMyListStatus(); // Re-fetch the latest list
+
+        // Update all movie card buttons across the page
+        document.querySelectorAll('.movie-card-container').forEach(card => {
+            const imdbId = card.dataset.imdbId;
+            const myListBtn = card.querySelector('.mylist-toggle-btn');
+            if (myListBtn) {
+                const isInList = isItemInMyList(imdbId);
+                myListBtn.querySelector('i').className = isInList ? 'fas fa-check' : 'fas fa-plus';
+                myListBtn.classList.toggle('added', isInList);
+                myListBtn.title = isInList ? `Remove ${card.dataset.title} from My List` : `Add ${card.dataset.title} to My List`;
+            }
+        });
+
+        // Update the detail overlay button if it's currently open for the relevant item
+        if (detailOverlayContainer.classList.contains('active')) {
+            const detailImdbId = detailOverlayContainer.querySelector('#detail-my-list-btn')?.dataset.imdbId;
+            if (detailImdbId) {
+                const detailMyListBtn = detailOverlayContainer.querySelector('#detail-my-list-btn');
+                const updatedIsInList = isItemInMyList(detailImdbId);
+                detailMyListBtn.querySelector('i').className = updatedIsInList ? 'fas fa-check mr-2' : 'fas fa-plus mr-2';
+                detailMyListBtn.querySelector('span').textContent = updatedIsInList ? 'In My List' : 'My List';
+            }
+        }
+
+        // If currently on My List page, re-load it to reflect changes
+        if (!keepCurrentView && document.querySelector('.nav-link.active')?.dataset.content === 'mylist') {
+            await loadContent('mylist');
         }
     };
 
@@ -680,9 +825,18 @@ document.addEventListener('DOMContentLoaded', () => {
             e.currentTarget.classList.add('active');
             const contentType = link.dataset.content;
             loadContent(contentType);
+            // Close desktop search if open
             if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
                 searchInputWrapper.classList.add('hidden');
                 searchInput.value = '';
+            }
+            // Close mobile search if open
+            if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
+                mobileSearchOverlay.classList.remove('active');
+                mobileSearchOverlay.style.display = 'none';
+                document.body.classList.remove('overflow-hidden');
+                mobileSearchInput.value = '';
+                mobileSearchResultsGrid.innerHTML = '';
             }
         });
     });
@@ -701,24 +855,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Toggle mobile search overlay
         document.getElementById('search-toggle-btn-mobile')?.addEventListener('click', () => {
-            const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
             if (mobileSearchOverlay) {
                 mobileSearchOverlay.classList.add('active');
                 mobileSearchOverlay.style.display = 'flex';
                 document.body.classList.add('overflow-hidden');
-                document.getElementById('mobile-search-input')?.focus();
+                mobileSearchInput?.focus();
             }
         });
 
         // Close mobile search overlay
         document.querySelector('#mobile-search-overlay .close-search-btn')?.addEventListener('click', () => {
-            const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
             if (mobileSearchOverlay) {
                 mobileSearchOverlay.classList.remove('active');
                 setTimeout(() => {
                     mobileSearchOverlay.style.display = 'none';
                     document.body.classList.remove('overflow-hidden');
-                    document.getElementById('mobile-search-input').value = '';
+                    mobileSearchInput.value = '';
+                    mobileSearchResultsGrid.innerHTML = '';
                 }, 300);
             }
         });
@@ -730,58 +883,87 @@ document.addEventListener('DOMContentLoaded', () => {
             const query = event.target.value.trim();
             searchTimeout = setTimeout(() => {
                 if (query.length > 2) {
-                    handleSearch(query);
+                    handleSearch(query, event.target.id === 'mobile-search-input');
                 } else if (query.length === 0) {
-                    // If search box is empty, go back to home content
+                    // If search box is empty, go back to home content or clear search results
                     if (document.getElementById('search-results-section')) {
                          document.getElementById('search-results-section').classList.add('hidden');
                     }
-                    loadContent('home'); // Reload home content when search is cleared
+                    if (mobileSearchResultsGrid) {
+                        mobileSearchResultsGrid.innerHTML = '';
+                        mobileSearchNoResults.classList.add('hidden');
+                    }
+                    // Only reload home if on search page and query is empty, otherwise stay on current page
+                    if (window.innerWidth >= 768 && document.getElementById('search-results-section') && !document.getElementById('search-results-section').classList.contains('hidden')) {
+                        loadContent('home');
+                    }
                 }
             }, 300); // 300ms debounce time
         };
 
         searchInput.addEventListener('input', handleSearchInput);
-        document.getElementById('mobile-search-input')?.addEventListener('input', handleSearchInput);
+        mobileSearchInput?.addEventListener('input', handleSearchInput);
     }
 
     /**
      * Handles the search logic.
      * @param {string} query - The search query.
+     * @param {boolean} isMobileSearch - True if the search is from the mobile overlay.
      */
-    const handleSearch = async (query) => {
+    const handleSearch = async (query, isMobileSearch) => {
         showLoading();
-        movieSectionsContainer.innerHTML = '';
-        heroSection.classList.add('hidden-hero');
-        clearInterval(heroInterval);
+        movieSectionsContainer.innerHTML = ''; // Clear home content
+        heroSection.classList.add('hidden-hero'); // Hide hero
+        clearInterval(heroInterval); // Stop hero carousel
 
         const searchResultsSection = document.getElementById('search-results-section');
         const searchResultsGrid = document.getElementById('search-results-grid');
         const allContentView = document.getElementById('all-content-view');
 
-        if (searchResultsSection) searchResultsSection.classList.remove('hidden');
+        // Manage visibility based on where the search is performed
+        if (!isMobileSearch) {
+            if (searchResultsSection) searchResultsSection.classList.remove('hidden');
+            if (searchResultsGrid) searchResultsGrid.innerHTML = ''; // Clear previous desktop results
+        } else {
+            // Mobile search overlay handles its own grid
+            if (mobileSearchResultsGrid) mobileSearchResultsGrid.innerHTML = '';
+            if (mobileSearchNoResults) mobileSearchNoResults.classList.add('hidden');
+        }
         if (allContentView) allContentView.classList.add('hidden'); // Hide other full view
-
-        if (searchResultsGrid) searchResultsGrid.innerHTML = ''; // Clear previous results
 
         try {
             const searchResults = await fetchData(`${API_BASE_URL}/search?q=${encodeURIComponent(query)}`);
             const allResults = [...(searchResults.movies || []), ...(searchResults.series || [])];
             const filteredResults = allResults.filter(item => isValidPosterUrl(item.poster));
 
+            const targetGrid = isMobileSearch ? mobileSearchResultsGrid : searchResultsGrid;
+            const targetNoResults = isMobileSearch ? mobileSearchNoResults : null; // Desktop uses its own grid messages
+
             if (filteredResults.length > 0) {
                 filteredResults.forEach(item => {
                     if (item.imdbID && item.type) {
-                        searchResultsGrid.appendChild(createMovieCard(item));
+                        targetGrid.appendChild(createMovieCard(item));
                     }
                 });
+                if (targetNoResults) targetNoResults.classList.add('hidden');
             } else {
-                searchResultsGrid.innerHTML = `<p class="text-gray-400 p-4">No results found for "${query}" with valid images.</p>`;
+                targetGrid.innerHTML = ''; // Ensure grid is empty
+                if (targetNoResults) {
+                    targetNoResults.classList.remove('hidden');
+                    targetNoResults.textContent = `No results found for "${query}".`;
+                } else {
+                    // For desktop, put message directly into grid if no results
+                    if (searchResultsGrid) searchResultsGrid.innerHTML = `<p class="text-gray-400 p-4">No results found for "${query}" with valid images.</p>`;
+                }
             }
             // Pagination for search results is not implemented yet, so hide buttons
             document.getElementById('search-pagination')?.classList.add('hidden');
         } catch (error) {
-            if (searchResultsGrid) searchResultsGrid.innerHTML = `<p class="text-red-500 p-4">Error performing search for "${query}". Please try again later.</p>`;
+            const targetGrid = isMobileSearch ? mobileSearchResultsGrid : searchResultsGrid;
+            const targetNoResults = isMobileSearch ? mobileSearchNoResults : null;
+
+            if (targetGrid) targetGrid.innerHTML = `<p class="text-red-500 p-4">Error performing search for "${query}". Please try again later.</p>`;
+            if (targetNoResults) targetNoResults.classList.remove('hidden');
             console.error('Search error:', error);
         } finally {
             hideLoading();
@@ -811,15 +993,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (searchResultsSection) searchResultsSection.classList.add('hidden');
         if (allContentView) allContentView.classList.add('hidden');
 
+        // Close search inputs/overlays if they are open
         if (searchInputWrapper && !searchInputWrapper.classList.contains('hidden')) {
             searchInputWrapper.classList.add('hidden');
             searchInput.value = '';
         }
-        if (document.getElementById('mobile-search-overlay')) {
-            document.getElementById('mobile-search-overlay').classList.remove('active');
-            document.getElementById('mobile-search-overlay').style.display = 'none';
+        if (mobileSearchOverlay && mobileSearchOverlay.classList.contains('active')) {
+            mobileSearchOverlay.classList.remove('active');
+            mobileSearchOverlay.style.display = 'none';
+            document.body.classList.remove('overflow-hidden'); // Re-enable scrolling
+            mobileSearchInput.value = '';
+            mobileSearchResultsGrid.innerHTML = '';
         }
 
+        // Handle hero section visibility
         if (heroSection) {
             if (contentType !== 'home') {
                 heroSection.classList.add('hidden-hero');
@@ -833,6 +1020,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // Always fetch latest My List status before rendering content
+        await fetchMyListStatus();
+
         try {
             if (contentType === 'home') {
                 // Load other sections progressively
@@ -840,15 +1030,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     { title: 'Most Popular Movies', endpoint: `${API_BASE_URL}/movies/popular` },
                     { title: 'Best Series', endpoint: `${API_BASE_URL}/series/best` },
                     { title: 'Most Popular Series', endpoint: `${API_BASE_URL}/series/popular` },
-                    { title: 'Action Movies', endpoint: `${API_BASE_URL}/movies/genre/action` },
-                    { title: 'Comedy Films', endpoint: `${API_BASE_URL}/movies/genre/comedy` },
-                    { title: 'Drama Series', endpoint: `${API_BASE_URL}/series/genre/drama` },
-                    // Removed 'Sci-Fi Movies' to avoid potential backend errors
-                    // { title: 'Sci-Fi Movies', endpoint: `${API_BASE_URL}/movies/genre/sci-fi` },
-                    { title: 'Animation Series', endpoint: `${API_BASE_URL}/series/genre/animation` },
-                    { title: 'Horror Films', endpoint: `${API_BASE_URL}/movies/genre/horror` },
-                    { title: 'Fantasy Movies', endpoint: `${API_BASE_URL}/movies/genre/fantasy` },
-                    { title: 'Crime Series', endpoint: `${API_BASE_URL}/series/genre/crime` }
+                    { title: 'Action Movies', endpoint: `${API_BASE_URL}/movies/genre/Action` }, // Capitalized genres for consistency
+                    { title: 'Comedy Films', endpoint: `${API_BASE_URL}/movies/genre/Comedy` },
+                    { title: 'Drama Series', endpoint: `${API_BASE_URL}/series/genre/Drama` },
+                    { title: 'Animation Series', endpoint: `${API_BASE_URL}/series/genre/Animation` },
+                    { title: 'Horror Films', endpoint: `${API_BASE_URL}/movies/genre/Horror` },
+                    { title: 'Fantasy Movies', endpoint: `${API_BASE_URL}/movies/genre/Fantasy` },
+                    { title: 'Crime Series', endpoint: `${API_BASE_URL}/series/genre/Crime` }
                 ];
 
                 for (const section of homeSectionEndpoints) {
@@ -860,35 +1048,49 @@ document.addEventListener('DOMContentLoaded', () => {
             } else if (contentType === 'series') {
                 await fetchAndDisplaySection('All Series', `${API_BASE_URL}/series`, true);
             } else if (contentType === 'mylist') {
-                const userList = await fetchData(`${API_BASE_URL}/mylist/${userId}`);
+                // My list data is already fetched by fetchMyListStatus()
                 const mylistSection = document.createElement('div');
                 mylistSection.className = 'movie-section mb-8';
                 mylistSection.innerHTML = `<h2 class="text-xl md:text-2xl font-bold mb-4 text-white">My List</h2><div class="movie-grid-category grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 md:gap-4"></div>`;
                 const mylistGrid = mylistSection.querySelector('.movie-grid-category');
                 movieSectionsContainer.appendChild(mylistSection); // Append immediately
 
-                if (userList && userList.items && userList.items.length > 0) {
-                    const filteredMyListItems = userList.items.filter(item => isValidPosterUrl(item.poster));
+                if (userMyList && userMyList.length > 0) {
+                    const filteredMyListItems = userMyList.filter(item => isValidPosterUrl(item.poster));
 
                     if (filteredMyListItems.length > 0) {
                         filteredMyListItems.forEach(item => {
                             const card = createMovieCard(item);
-                            const removeBtn = document.createElement('button');
-                            removeBtn.className = 'absolute top-2 right-2 bg-red-600 text-white p-1 rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300';
-                            removeBtn.innerHTML = `<i class="fas fa-times"></i>`;
-                            removeBtn.title = `Remove ${item.title} from My List`;
-                            removeBtn.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                removeFromMyList(item.imdbID);
-                            });
-                            card.appendChild(removeBtn);
+                            // Override card's hover buttons to only show remove on My List page
+                            const cardButtons = card.querySelector('.movie-card-buttons');
+                            if (cardButtons) {
+                                cardButtons.innerHTML = `
+                                    <button class="bg-red-600 text-white p-2 rounded-full text-lg flex items-center justify-center hover:bg-red-700 transition-colors"
+                                        title="Remove ${item.title} from My List" data-imdb-id="${item.imdbID}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <button class="bg-gray-700 text-white p-2 rounded-full text-lg flex items-center justify-center hover:bg-gray-600 transition-colors"
+                                        title="More info on ${item.title}" data-imdb-id="${item.imdbID}" data-type="${item.type}">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                `;
+                                // Re-attach event listeners for these specific buttons
+                                card.querySelector('.bg-red-600')?.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    removeFromMyList(e.currentTarget.dataset.imdbId); // No keepCurrentView true, will reload page
+                                });
+                                card.querySelector('.bg-gray-700')?.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    showDetailsOverlay(e.currentTarget.dataset.imdbId, e.currentTarget.dataset.type);
+                                });
+                            }
                             mylistGrid.appendChild(card);
                         });
                     } else {
-                        mylistGrid.innerHTML = `<p class="text-lg text-gray-400">Your list is empty or contains no items with valid images.</p>`;
+                        mylistGrid.innerHTML = `<p class="text-lg text-gray-400 p-4">Your list is empty or contains no items with valid images.</p>`;
                     }
                 } else {
-                    mylistGrid.innerHTML = `<p class="text-lg text-gray-400">Your list is empty. Add movies or series to your list!</p>`;
+                    mylistGrid.innerHTML = `<p class="text-lg text-gray-400 p-4">Your list is empty. Add movies or series to your list!</p>`;
                 }
             }
         } catch (error) {
