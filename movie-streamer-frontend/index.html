@@ -3,118 +3,165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netflix Clone</title>
+    <title>Netflix - StreamVerse</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    
-    <link rel="stylesheet" href="style.css"> 
-
-    </head>
-<body class="bg-[#141414] text-[#e5e5e5]">
-    <header id="main-header" class="fixed top-0 left-0 w-full z-50 p-4 flex items-center justify-between transition-all duration-300">
-        <div class="flex items-center space-x-6">
-            <h1 class="text-red-600 text-3xl font-bold">NETFLIX</h1>
-            <nav class="hidden md:block">
-                <ul class="flex space-x-4">
-                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors active" data-content="home">Home</a></li>
-                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="movies">Movies</a></li>
-                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="series">Series</a></li>
-                    <li><a href="#" class="nav-link text-white hover:text-gray-300 transition-colors" data-content="mylist">My List</a></li>
-                </ul>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex flex-col bg-[#141414] text-[#e5e5e5]">
+    <header class="bg-gradient-to-b from-black to-transparent p-4 md:px-8 flex justify-between items-center fixed top-0 w-full z-50 transition-all duration-300" id="main-header">
+        <div class="flex items-center space-x-4 md:space-x-6">
+            <a href="#" class="text-red-600 text-3xl md:text-4xl font-bold tracking-tighter">NETFLIX</a>
+            <nav class="hidden md:flex space-x-6 text-gray-300 text-sm">
+                <a href="#" class="nav-link hover:text-white transition-colors duration-200 active" data-content="home">Home</a>
+                <a href="#" class="nav-link hover:text-white transition-colors duration-200" data-content="series">TV Shows</a>
+                <a href="#" class="nav-link hover:text-white transition-colors duration-200" data-content="movies">Movies</a>
+                <a href="#" class="nav-link hover:text-white transition-colors duration-200" data-content="mylist">My List</a>
             </nav>
         </div>
-        <div class="flex items-center space-x-4">
-            <div class="relative flex items-center w-full md:w-auto">
-                <button id="search-toggle-btn" class="text-white text-xl hover:text-gray-300 transition-colors mr-2">
-                    <i class="fas fa-search"></i>
+        <div class="flex items-center space-x-4 md:space-x-6">
+            <div id="search-input-wrapper" class="relative hidden md:block">
+                <input type="text" id="search-input" placeholder="Search for movies or TV shows..." class="bg-gray-800 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 w-64">
+                <button id="search-toggle-btn" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white md:hidden">
+                    <i class="fas fa-search text-lg"></i>
                 </button>
-                <div id="search-input-wrapper" class="relative hidden flex-grow md:block">
-                    <input type="text" id="desktop-search-input" placeholder="Search..." class="bg-gray-800 text-white px-3 py-1 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300 w-full">
-                </div>
             </div>
-            <div id="user-details" class="flex items-center space-x-2">
-                <span class="text-sm md:text-base">Guest</span>
-                <img src="https://placehold.co/40x40/FF0000/FFFFFF?text=G" alt="User Avatar" class="w-8 h-8 rounded-full border-2 border-white">
+            <button id="search-toggle-btn-mobile" class="text-gray-300 hover:text-white md:hidden">
+                <i class="fas fa-search text-lg"></i>
+            </button>
+            <div id="user-details" class="flex items-center space-x-2 cursor-pointer">
+                <img id="user-profile-img" src="https://placehold.co/40x40/FF0000/FFFFFF?text=U" alt="User Profile" class="rounded-md w-8 h-8 md:w-10 md:h-10 object-cover">
+                <span class="hidden md:block text-sm font-semibold">Guest</span>
+                <i class="fas fa-caret-down text-gray-300 hidden md:block"></i>
             </div>
         </div>
     </header>
 
-    <section id="hero-section" class="relative">
-        <div id="hero-slides-container" class="hero-slides-container">
+    <section id="hero-section" class="relative w-full h-[50vh] md:h-[70vh] lg:h-[80vh] overflow-hidden flex items-end">
+        <div id="hero-slides-container" class="absolute inset-0 flex transition-transform duration-700 ease-in-out">
             </div>
-        <button id="hero-prev-btn" class="hero-nav-btn left-4"><i class="fas fa-chevron-left"></i></button>
-        <button id="hero-next-btn" class="hero-nav-btn right-4"><i class="fas fa-chevron-right"></i></button>
-        <div id="hero-dots-container" class="hero-dots-container">
+        <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+        <div class="absolute bottom-0 left-0 p-4 md:p-8 lg:p-12 text-white z-10 w-full md:w-2/3 lg:w-1/2">
+            <h1 id="hero-title" class="text-3xl md:text-5xl lg:text-6xl font-bold mb-2 drop-shadow-lg"></h1>
+            <p id="hero-overview" class="text-sm md:text-base lg:text-lg mb-4 line-clamp-3 drop-shadow-md"></p>
+            <div class="flex space-x-3">
+                <button id="hero-play-btn" class="bg-white text-black px-4 py-2 md:px-6 md:py-3 rounded-md font-semibold hover:bg-gray-300 transition-colors duration-200 flex items-center space-x-2">
+                    <i class="fas fa-play"></i>
+                    <span>Play</span>
+                </button>
+                <button id="hero-info-btn" class="bg-gray-700 text-white px-4 py-2 md:px-6 md:py-3 rounded-md font-semibold hover:bg-gray-600 transition-colors duration-200 flex items-center space-x-2">
+                    <i class="fas fa-info-circle"></i>
+                    <span>More Info</span>
+                </button>
+            </div>
+        </div>
+        <button id="hero-prev-btn" class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full z-10 hover:bg-opacity-75 transition-opacity duration-200">
+            <i class="fas fa-chevron-left text-xl"></i>
+        </button>
+        <button id="hero-next-btn" class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full z-10 hover:bg-opacity-75 transition-opacity duration-200">
+            <i class="fas fa-chevron-right text-xl"></i>
+        </button>
+        <div id="hero-dots-container" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
             </div>
     </section>
 
-    <main class="container mx-auto px-4 py-8">
-        <div id="loading-indicator" class="hidden">
-            <i class="fas fa-spinner fa-spin text-red-600 text-4xl"></i>
-            <p class="mt-4 text-lg">Loading content...</p>
+    <main class="flex-grow p-4 md:p-8 lg:p-12 mt-[-80px] md:mt-[-100px] relative z-20">
+        <div id="loading-indicator" class="text-center text-gray-400 text-lg py-10 hidden">
+            <i class="fas fa-spinner fa-spin mr-2"></i> Loading content...
         </div>
-        <div id="movie-sections" class="relative">
+
+        <section id="search-results-section" class="hidden">
+            <h2 class="text-2xl md:text-3xl font-bold mb-6">Search Results</h2>
+            <div id="search-results-grid" class="movie-grid-category">
+                </div>
+            <div id="search-pagination" class="flex justify-center items-center space-x-4 mt-8">
+                <button id="search-prev-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                <span id="search-page-info" class="text-gray-300"></span>
+                <button id="search-next-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
             </div>
+        </section>
+
+        <div id="movie-sections" class="space-y-8 md:space-y-12">
+            </div>
+
+        <section id="all-content-view" class="hidden mt-8">
+            <h2 id="all-content-title" class="text-2xl md:text-3xl font-bold mb-6"></h2>
+            <div id="all-content-grid" class="movie-grid-category">
+                </div>
+            <div id="all-content-pagination" class="flex justify-center items-center space-x-4 mt-8">
+                <button id="view-all-prev-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                <span id="view-all-page-info" class="text-gray-300"></span>
+                <button id="view-all-next-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+            </div>
+        </section>
     </main>
 
-    <div id="detail-overlay-container" class="detail-overlay fixed inset-0 z-40">
-        </div>
-
-    <div id="message-box" class="fixed bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg text-white font-semibold text-center z-[9999] opacity-0 transition-opacity duration-300">
-        </div>
-
-    <nav id="mobile-bottom-nav">
-        <ul>
-            <li><a href="#" class="nav-link active" data-content="home"><i class="fas fa-home"></i>Home</a></li>
-            <li><a href="#" class="nav-link" data-content="movies"><i class="fas fa-film"></i>Movies</a></li>
-            <li><a href="#" class="nav-link" data-content="series"><i class="fas fa-tv"></i>Series</a></li>
-            <li><a href="#" class="nav-link" data-content="mylist"><i class="fas fa-heart"></i>My List</a></li>
-        </ul>
+    <nav id="mobile-bottom-nav" class="fixed bottom-0 left-0 w-full bg-black bg-opacity-95 text-gray-400 text-xs py-2 z-50 border-t border-gray-800 flex justify-around items-center md:hidden">
+        <a href="#" class="nav-link flex flex-col items-center p-2 hover:text-white transition-colors duration-200 active" data-content="home">
+            <i class="fas fa-home text-lg mb-1"></i>
+            <span>Home</span>
+        </a>
+        <a href="#" class="nav-link flex flex-col items-center p-2 hover:text-white transition-colors duration-200" data-content="series">
+            <i class="fas fa-tv text-lg mb-1"></i>
+            <span>TV Shows</span>
+        </a>
+        <a href="#" class="nav-link flex flex-col items-center p-2 hover:text-white transition-colors duration-200" data-content="movies">
+            <i class="fas fa-film text-lg mb-1"></i>
+            <span>Movies</span>
+        </a>
+        <a href="#" class="nav-link flex flex-col items-center p-2 hover:text-white transition-colors duration-200" data-content="mylist">
+            <i class="fas fa-list text-lg mb-1"></i>
+            <span>My List</span>
+        </a>
     </nav>
 
-    <div id="mobile-search-overlay" class="fixed inset-0 bg-black bg-opacity-95 z-50 flex-col items-center pt-8 hidden md:hidden">
-        <div class="search-header w-11/12 max-w-2xl flex items-center mb-4">
-            <input type="text" id="mobile-search-input" placeholder="Search for movies, series..." class="flex-grow bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-full text-lg focus:outline-none focus:ring-2 focus:ring-red-600 transition-all duration-300">
-            <button id="close-search-btn" class="text-white text-3xl ml-4 cursor-pointer hover:text-gray-400 transition-colors">&times;</button>
-        </div>
-        <div id="mobile-search-results-container" class="w-11/12 max-w-2xl overflow-y-auto flex-grow pb-4">
+    <div id="detail-overlay" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] hidden p-4">
+        <div class="relative bg-[#1a1a1a] rounded-lg shadow-xl overflow-hidden w-full max-w-4xl max-h-[90vh] flex flex-col md:flex-row">
+            <button id="close-detail-overlay-btn" class="absolute top-3 right-3 text-white text-2xl bg-gray-800 rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-700 z-10">
+                <i class="fas fa-times"></i>
+            </button>
+
+            <div class="w-full md:w-1/2 relative">
+                <img id="detail-poster" src="" alt="Content Poster" class="w-full h-auto object-cover rounded-t-lg md:rounded-l-lg md:rounded-tr-none">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                <div class="absolute bottom-4 left-4 flex space-x-3 z-10">
+                    <button id="detail-play-btn" class="bg-white text-black px-4 py-2 rounded-md font-semibold hover:bg-gray-300 transition-colors duration-200 flex items-center space-x-2">
+                        <i class="fas fa-play"></i>
+                        <span>Play</span>
+                    </button>
+                    <button id="detail-my-list-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md font-semibold hover:bg-gray-600 transition-colors duration-200 flex items-center space-x-2">
+                        <i class="fas fa-plus"></i>
+                        <span>My List</span>
+                    </button>
+                </div>
             </div>
+
+            <div class="w-full md:w-1/2 p-6 overflow-y-auto custom-scrollbar">
+                <h2 id="detail-title" class="text-3xl md:text-4xl font-bold mb-3 text-white"></h2>
+                <p id="detail-release-year" class="text-gray-400 text-sm mb-2"></p>
+                <p id="detail-runtime" class="text-gray-400 text-sm mb-2"></p>
+                <div class="flex items-center space-x-2 mb-4">
+                    <span id="detail-rating" class="bg-yellow-500 text-black text-xs font-bold px-2 py-1 rounded"></span>
+                    <span id="detail-genres" class="text-gray-300 text-sm"></span>
+                </div>
+                <p id="detail-overview" class="text-gray-300 text-base leading-relaxed mb-4"></p>
+                <p id="detail-cast" class="text-gray-400 text-sm"><strong class="text-white">Cast:</strong> <span id="cast-list"></span></p>
+                <p id="detail-director" class="text-gray-400 text-sm mt-1"><strong class="text-white">Director:</strong> <span id="director-name"></span></p>
+            </div>
+        </div>
     </div>
 
-    <div id="video-player-overlay" class="fixed inset-0 bg-black bg-opacity-98 z-[1000] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
-        <div class="video-container relative">
-            <button class="close-video-btn">&times;</button>
-            <video id="movie-player" autoplay playsinline class="w-full h-full bg-black"></video>
-            <div class="player-controls absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2 opacity-0 transition-opacity duration-300">
-                <div class="progress-bar-container w-full h-2 bg-gray-700 rounded-full cursor-pointer relative">
-                    <div class="progress-bar-fill h-full bg-red-600 rounded-full" style="width: 0%;"></div>
-                    <div class="progress-bar-handle absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-red-600 rounded-full opacity-0 transition-opacity duration-200"></div>
+    <div id="video-player-overlay" class="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-[110] hidden">
+        <div class="relative w-full h-full max-w-6xl max-h-[90vh] flex items-center justify-center">
+            <button id="close-player-btn" class="absolute top-4 right-4 text-white text-3xl bg-gray-800 rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-700 z-10">
+                <i class="fas fa-times"></i>
+            </button>
+            <div id="video-player-container" class="relative w-full h-full flex items-center justify-center bg-black">
+                <div id="buffering-spinner" class="absolute text-white text-4xl hidden">
+                    <i class="fas fa-spinner fa-spin"></i>
                 </div>
-                <div class="controls-bottom-row flex items-center justify-between text-white text-lg">
-                    <div class="flex items-center gap-4">
-                        <button id="play-pause-btn" class="text-2xl"><i class="fas fa-play"></i></button>
-                        <button id="rewind-btn" class="text-xl"><i class="fas fa-backward"></i> 10</button>
-                        <button id="forward-btn" class="text-xl">10 <i class="fas fa-forward"></i></button>
-                        <span id="current-time" class="text-sm">0:00</span> / <span id="duration" class="text-sm">0:00</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="relative group">
-                            <button id="audio-track-btn" class="text-xl"><i class="fas fa-headphones"></i></button>
-                            <div id="audio-track-options" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-800 rounded-md shadow-lg p-2 hidden group-hover:block w-32 text-sm">
-                                </div>
-                        </div>
-                        <div class="relative group">
-                            <button id="subtitle-btn" class="text-xl"><i class="fas fa-closed-captioning"></i></button>
-                            <div id="subtitle-options" class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-gray-800 rounded-md shadow-lg p-2 hidden group-hover:block w-32 text-sm">
-                                </div>
-                        </div>
-
-                        <button id="volume-btn"><i class="fas fa-volume-up"></i></button>
-                        <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" class="volume-slider">
-                        <button id="fullscreen-btn"><i class="fas fa-expand"></i></button>
-                    </div>
-                </div>
+                <iframe id="movie-player" class="w-full h-full" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
         </div>
     </div>

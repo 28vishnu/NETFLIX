@@ -939,7 +939,7 @@ body {
         width: auto;
         justify-content: flex-start;
     }
-    .controls-bottom-row .flex.items-center.gap-2 {
+    .controls-bottom-row .flex.items-center.gap-2 { /* Right side controls */
         justify-content: flex-end;
     }
     .volume-slider {
