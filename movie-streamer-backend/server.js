@@ -4,7 +4,8 @@ const cors = require('cors');
 const axios = require('axios'); // For making HTTP requests to TMDB
 
 // Load environment variables from .env file (if running locally)
-// require('dotenv').config(); 
+// In production environments like Render, these are automatically provided.
+require('dotenv').config(); 
 
 const Movie = require('./models/Movie'); // Your Movie model
 const Series = require('./models/Series'); // Your Series model
@@ -13,11 +14,19 @@ const UserList = require('./models/UserList'); // Your UserList model
 const app = express();
 const PORT = process.env.PORT || 5000; // Use port 5000 for the backend, or environment variable
 
-// TMDB API Configuration - IMPORTANT: Use environment variables in production
-// The provided key in your original file is used here for consistency.
-const TMDB_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjYmNkMzgwOTZlYzBiOWYyOGUzMDVjNmI1ZDQ3ZmY4MSIsIm5iZiI6MTc0ODc3MTYwNi4wMjU5OTk4LCJzdWIiOiI2ODNjMjMxNmY1YjM3ODE2OWJmMmFmZWMiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI%3D.4Eww2uuHE9QQaAf6hj3SIN1L-EmQ08j7PZKvlc2oMds';
+// TMDB API Configuration - IMPORTANT: Now using your provided key
+const TMDB_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJjYmNkMzgwOTZlYzBiOWYyOGUzMDVjNmI1ZDQ3ZmY4MSIsIm5iZiI6MTc0ODc3MTYwNi4wMjU5OTk4LCJzdWIiOiI2ODNjMjMxNmY1YjM3ODE2OWJmMmFmZWMiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI%3D.4Eww2uuHE9QQaAf6hj3SIN1L-EmQ08j7PZKvlc2oMds'; 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/'; // Use w500 for posters, original for backdrops
+
+// The check for TMDB_API_KEY being loaded is removed as it's now hardcoded.
+// If you revert to using process.env.TMDB_API_KEY, uncomment this check.
+/*
+if (!TMDB_API_KEY) {
+    console.error('Error: TMDB_API_KEY is not set in environment variables. Please set it in Render or a .env file.');
+    process.exit(1); // Exit if API key is missing
+}
+*/
 
 // In-memory cache for TMDB genres
 let movieGenres = {};
@@ -195,20 +204,21 @@ app.get('/api/movies/trending', async (req, res) => {
         const trendingMovies = [];
 
         for (const item of data.results) {
-            if (trendingMovies.length >= 5) break; // Limit to 5 for hero banner
+            // Ensure we have enough data for the hero banner display (poster, backdrop, title/name, overview)
+            if (trendingMovies.length >= 5) break; 
+            if (!item.poster_path && !item.backdrop_path) continue; // Must have at least one image
+            if (!item.title && !item.name) continue; // Must have a title/name
+            if (!item.overview) continue; // Must have an overview
 
-            // Ensure we have enough data for the hero banner display
-            if (item.poster_path && item.backdrop_path && (item.title || item.name) && item.overview) {
-                const mapped = await mapTmdbToSchema(item, 'movie');
-                if (mapped && mapped.imdbID) { // Ensure mapped object is valid and has imdbID
-                    // If not in DB, save it so playable URL can be set later
-                    const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
-                    if (!existingMovie) {
-                        const newMovie = new Movie(mapped);
-                        await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
-                    }
-                    trendingMovies.push(mapped);
+            const mapped = await mapTmdbToSchema(item, 'movie');
+            if (mapped && (mapped.imdbID || mapped.tmdbId)) { // Ensure mapped object is valid and has an ID
+                // If not in DB, save it so playable URL can be set later
+                const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID }); // Prefer IMDb ID for lookup
+                if (!existingMovie) {
+                    const newMovie = new Movie(mapped);
+                    await newMovie.save().catch(saveErr => console.error("Error saving new movie from TMDB:", saveErr.message));
                 }
+                trendingMovies.push(mapped);
             }
         }
         res.json(trendingMovies);
@@ -230,7 +240,7 @@ app.get('/api/movies/popular', async (req, res) => {
         const popularMovies = [];
         for (const item of allTmdbMovies) {
             const mapped = await mapTmdbToSchema(item, 'movie');
-            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
+            if (mapped && (mapped.imdbID || mapped.tmdbId) && mapped.poster) { // Ensure essential fields
                 const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                 if (!existingMovie) { // Only save if not already in DB
                     const newMovie = new Movie(mapped);
@@ -241,7 +251,6 @@ app.get('/api/movies/popular', async (req, res) => {
         }
         res.json(popularMovies);
     } catch (error) {
-        console.error('Error fetching popular movies:', error);
         res.status(500).json({ error: 'Failed to fetch popular movies', details: error.message });
     }
 });
@@ -258,7 +267,7 @@ app.get('/api/series/best', async (req, res) => {
         const bestSeries = [];
         for (const item of allTmdbSeries) {
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
+            if (mapped && (mapped.imdbID || mapped.tmdbId) && mapped.poster) { // Ensure essential fields
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (!existingSeries) {
                     const newSeries = new Series(mapped);
@@ -286,7 +295,7 @@ app.get('/api/series/popular', async (req, res) => {
         const popularSeries = [];
         for (const item of allTmdbSeries) {
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
+            if (mapped && (mapped.imdbID || mapped.tmdbId) && mapped.poster) { // Ensure essential fields
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (!existingSeries) {
                     const newSeries = new Series(mapped);
@@ -321,7 +330,7 @@ app.get('/api/movies/genre/:genreName', async (req, res) => {
         const genreMovies = [];
         for (const item of allTmdbMovies) {
             const mapped = await mapTmdbToSchema(item, 'movie');
-            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
+            if (mapped && (mapped.imdbID || mapped.tmdbId) && mapped.poster) { // Ensure essential fields
                 const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                 if (!existingMovie) {
                     const newMovie = new Movie(mapped);
@@ -356,7 +365,7 @@ app.get('/api/series/genre/:genreName', async (req, res) => {
         const genreSeries = [];
         for (const item of allTmdbSeries) {
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID && mapped.poster) { // Ensure essential fields
+            if (mapped && (mapped.imdbID || mapped.tmdbId) && mapped.poster) { // Ensure essential fields
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (!existingSeries) {
                     const newSeries = new Series(mapped);
@@ -384,7 +393,7 @@ app.get('/api/movies', async (req, res) => {
         const movies = [];
         for (const item of allTmdbMovies) {
             const mapped = await mapTmdbToSchema(item, 'movie');
-            if (mapped && mapped.imdbID && mapped.poster) {
+            if (mapped && (mapped.imdbID || mapped.tmdbId) && mapped.poster) {
                 const existingMovie = await Movie.findOne({ imdbID: mapped.imdbID });
                 if (!existingMovie) {
                     const newMovie = new Movie(mapped);
@@ -412,7 +421,7 @@ app.get('/api/series', async (req, res) => {
         const series = [];
         for (const item of allTmdbSeries) {
             const mapped = await mapTmdbToSchema(item, 'series');
-            if (mapped && mapped.imdbID && mapped.poster) {
+            if (mapped && (mapped.imdbID || mapped.tmdbId) && mapped.poster) {
                 const existingSeries = await Series.findOne({ imdbID: mapped.imdbID });
                 if (!existingSeries) {
                     const newSeries = new Series(mapped);
@@ -493,14 +502,14 @@ const fetchContentDetails = async (id, type) => {
 
     // Save/Update in DB
     const Model = type === 'movie' ? Movie : Series;
-    if (imdbId) { // Only save if we have an IMDb ID
+    // Prefer lookup by IMDb ID, fall back to TMDB ID if IMDb ID is not available for this item
+    if (imdbId) {
         await Model.findOneAndUpdate(
             { imdbID: imdbId },
             { $set: { ...mappedItem } },
             { upsert: true, new: true } // Create if not exists, return updated doc
         ).catch(saveErr => console.error(`Error saving/updating ${type} in DB with IMDb ID ${imdbId}:`, saveErr.message));
-    } else {
-        // If no IMDb ID, still try to save/update by TMDB ID as a fallback, but IMDb is preferred
+    } else if (tmdbId) {
         await Model.findOneAndUpdate(
             { tmdbId: tmdbId },
             { $set: { ...mappedItem } },
@@ -627,9 +636,9 @@ app.put('/api/:type/:id/set-playable-url', async (req, res) => {
             // If not found by provided ID, try to fetch details and then update/create
             console.warn(`Item not found by ${Object.keys(query)[0]}: ${Object.values(query)[0]}. Attempting to fetch details and update.`);
             const contentDetails = await fetchContentDetails(id, type.slice(0, -1)); // Remove 's' from type
-            if (contentDetails && contentDetails.imdbID) { // Ensure we got a mapped item with an IMDb ID
+            if (contentDetails && (contentDetails.imdbID || contentDetails.tmdbId)) { // Ensure we got a mapped item with an ID
                 updatedItem = await Model.findOneAndUpdate(
-                    { imdbID: contentDetails.imdbID },
+                    { $or: [{ imdbID: contentDetails.imdbID }, { tmdbId: contentDetails.tmdbId }] }, // Search by either
                     { $set: { ...contentDetails, telegramPlayableUrl: url } }, // Update all fields and set URL
                     { new: true, upsert: true } // Create if not exists, return updated doc
                 );
