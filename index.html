@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Clone</title>
+    <!-- Google Fonts: Inter for a modern look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Load Tailwind CSS from CDN for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'netflix-red': '#E50914',
+                        'dark-background': '#141414',
+                        'card-background': '#222222',
+                        'text-color': '#FFFFFF',
+                        'light-grey': '#a0a0a0',
+                        'overlay-bg': 'rgba(0, 0, 0, 0.7)',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <!-- Link to your external stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-dark-background text-text-color font-inter antialiased min-h-screen flex flex-col">
+
+    <div id="app-container" class="relative flex flex-col flex-grow">
+
+        <!-- Header -->
+        <header id="main-header" class="fixed top-0 left-0 w-full bg-dark-background bg-opacity-90 z-50 transition-colors duration-300">
+            <nav class="flex items-center justify-between p-4 md:px-8 lg:px-16">
+                <!-- Logo -->
+                <div class="flex items-center">
+                    <a href="#home" class="text-netflix-red text-4xl font-bold tracking-tighter" data-page="home">
+                        NETFLIX
+                    </a>
+                    <!-- Desktop Navigation (hidden on small screens) -->
+                    <ul id="main-nav" class="hidden md:flex ml-8 space-x-6 text-text-color font-semibold">
+                        <li><a href="#home" class="hover:text-light-grey transition-colors duration-200" data-page="home">Home</a></li>
+                        <li><a href="#series" class="hover:text-light-grey transition-colors duration-200" data-page="series">TV Shows</a></li>
+                        <li><a href="#movies" class="hover:text-light-grey transition-colors duration-200" data-page="movies">Movies</a></li>
+                        <li><a href="#my-list" class="hover:text-light-grey transition-colors duration-200" data-page="my-list">My List</a></li>
+                    </ul>
+                </div>
+
+                <!-- Right-aligned controls -->
+                <div class="flex items-center space-x-4">
+                    <!-- Search Bar -->
+                    <div id="search-bar" class="relative flex items-center bg-card-background rounded px-3 py-1.5 transition-all duration-300 ease-in-out w-0 overflow-hidden opacity-0">
+                        <input type="text" id="search-input" placeholder="Search..." class="bg-transparent text-text-color outline-none w-full placeholder-light-grey">
+                        <button id="clear-search-btn" class="ml-2 text-light-grey hover:text-white transition-colors duration-200 hidden">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                    <button id="toggle-search" class="text-text-color hover:text-light-grey transition-colors duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </button>
+                    <span id="current-user-id" class="text-light-grey text-sm hidden md:block"></span>
+                    <!-- Mobile Menu Toggle (hidden on large screens) -->
+                    <button id="menu-toggle" class="md:hidden text-text-color hover:text-light-grey transition-colors duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                </div>
+            </nav>
+            <!-- Mobile Navigation (hidden by default, toggled by JS) -->
+            <ul id="mobile-nav" class="md:hidden flex flex-col items-center bg-dark-background py-4 space-y-4 text-text-color font-semibold transition-all duration-300 ease-in-out max-h-0 overflow-hidden">
+                <li><a href="#home" class="hover:text-light-grey transition-colors duration-200" data-page="home">Home</a></li>
+                <li><a href="#series" class="hover:text-light-grey transition-colors duration-200" data-page="series">TV Shows</a></li>
+                <li><a href="#movies" class="hover:text-light-grey transition-colors duration-200" data-page="movies">Movies</a></li>
+                <li><a href="#my-list" class="hover:text-light-grey transition-colors duration-200" data-page="my-list">My List</a></li>
+                <li class="text-light-grey text-sm">User ID: <span id="mobile-user-id-display"></span></li>
+            </ul>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content" class="flex-grow pt-16 md:pt-20">
+            <!-- App Message/Notification Area -->
+            <div id="app-message" class="fixed top-20 left-1/2 -translate-x-1/2 bg-opacity-90 text-center py-2 px-4 rounded shadow-lg text-sm z-50 hidden transition-opacity duration-300"></div>
+
+            <!-- Home Page -->
+            <section id="home-page" class="page active">
+                <!-- Hero Section (Carousel) -->
+                <div id="hero-section" class="relative w-full h-screen flex items-end pb-24 md:pb-32 bg-cover bg-center transition-all duration-500 ease-in-out">
+                    <div id="hero-carousel-container" class="absolute inset-0 w-full h-full">
+                        <!-- Hero items will be dynamically loaded here by JS -->
+                    </div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-dark-background via-transparent to-transparent"></div>
+                    <div class="hero-content relative z-10 p-4 md:px-16 lg:px-24">
+                        <h1 id="hero-title" class="hero-title text-text-color font-bold drop-shadow-lg mb-4">Loading...</h1>
+                        <!-- Hero Plot Removed -->
+                        <div class="flex space-x-4">
+                            <button id="hero-play-btn" class="play-btn bg-white text-dark-background px-6 py-2 rounded-md font-semibold flex items-center space-x-2 hover:bg-light-grey transition-colors duration-200">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v8a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4z" clip-rule="evenodd"></path></svg>
+                                <span>Play</span>
+                            </button>
+                            <button id="hero-more-info-btn" class="more-info-btn bg-card-background text-text-color px-6 py-2 rounded-md font-semibold flex items-center space-x-2 hover:bg-light-grey hover:text-dark-background transition-colors duration-200">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm11.77-1.168a.75.75 0 00-1.06-1.06L10.5 11.439l-1.155-1.154a.75.75 0 00-1.06 1.06L9.44 12.5l-1.154 1.155a.75.75 0 001.06 1.06L10.5 13.561l1.155 1.154a.75.75 0 001.06-1.06L11.56 12.5l1.155-1.154z" clip-rule="evenodd"></path></svg>
+                                <span>More Info</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Hero Pagination Dots -->
+                    <div id="hero-dots-container" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2 z-20">
+                        <!-- Dots will be generated by JS -->
+                    </div>
+                </div>
+
+                <div id="home-content-rows" class="py-8">
+                    <!-- Dynamic rows will be inserted here by JavaScript -->
+                    <h2 class="section-title text-2xl font-bold mb-4">Featured Movies</h2>
+                    <div id="featured-movies-row" class="content-row flex overflow-x-auto py-4 px-4 md:px-16 lg:px-24">
+                        <!-- Content cards will be inserted here -->
+                    </div>
+
+                    <h2 class="section-title text-2xl font-bold mb-4 mt-8">Featured Series</h2>
+                    <div id="featured-series-row" class="content-row flex overflow-x-auto py-4 px-4 md:px-16 lg:px-24"></div>
+
+                    <!-- Dynamic Genre Rows will be inserted here -->
+                    <div id="dynamic-genre-rows"></div>
+                </div>
+            </section>
+
+            <!-- Movies Page -->
+            <section id="movies-page" class="page hidden pt-8 pb-16">
+                <h2 class="section-title text-3xl font-bold mb-6 px-4 md:px-8 lg:px-16">All Movies</h2>
+                <div id="movies-grid" class="content-grid grid px-4 md:px-8 lg:px-16">
+                    <!-- Movie cards will be inserted here -->
+                </div>
+            </section>
+
+            <!-- Series Page -->
+            <section id="series-page" class="page hidden pt-8 pb-16">
+                <h2 class="section-title text-3xl font-bold mb-6 px-4 md:px-8 lg:px-16">All TV Shows</h2>
+                <div id="series-grid" class="content-grid grid px-4 md:px-8 lg:px-16">
+                    <!-- Series cards will be inserted here -->
+                </div>
+            </section>
+
+            <!-- My List Page -->
+            <section id="my-list-page" class="page hidden pt-8 pb-16">
+                <h2 class="section-title text-3xl font-bold mb-6 px-4 md:px-8 lg:px-16">My List</h2>
+                <p class="text-light-grey text-center mb-4">Your personalized list of movies and series.</p>
+                <div id="my-list-grid" class="content-grid grid px-4 md:px-8 lg:px-16">
+                    <!-- My List content cards will be inserted here -->
+                </div>
+                <div id="my-list-empty-message" class="text-center text-light-grey mt-8 hidden">
+                    <p>Your list is empty. Add some movies or series to get started!</p>
+                </div>
+            </section>
+
+            <!-- Policies Page -->
+            <section id="policies-page" class="page hidden pt-8 pb-16 px-4 md:px-8 lg:px-16">
+                <h2 class="text-3xl font-bold mb-6">Policies & Information</h2>
+                <div class="prose prose-invert max-w-none text-light-grey">
+                    <p class="mb-4">This is a Netflix clone created for educational and portfolio purposes. It uses publicly available API data and is not affiliated with Netflix, Inc.</p>
+                    <h3 class="text-xl font-bold mb-3">Data Privacy</h3>
+                    <p class="mb-4">No personal identifying information is collected or stored beyond a unique anonymous user ID (<span id="policies-user-id-display" class="font-mono text-white text-sm"></span>) for managing "My List" functionality.</p>
+                    <h3 class="text-xl font-bold mb-3">API Usage</h3>
+                    <p class="mb-4">Content data is sourced from TMDB (The Movie Database) APIs. All content displayed as "Netflix Original" is purely for demonstration purposes in this portfolio project and does not reflect actual Netflix Original status. Please respect the terms of service of these APIs.</p>
+                    <h3 class="text-xl font-bold mb-3">Disclaimer</h3>
+                    <p class="mb-4">This project is a demonstration of web development skills and does not provide actual streaming services.</p>
+                    <h3 class="text-xl font-bold mb-3">Technologies Used</h3>
+                    <ul class="list-disc list-inside mb-4">
+                        <li>Frontend: HTML, CSS (Tailwind CSS), JavaScript</li>
+                        <li>Backend: Node.js (Express)</li>
+                        <li>Database: MongoDB (Mongoose)</li>
+                        <li>APIs: TMDB</li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+
+        <!-- Modals and Overlays -->
+        <!-- Content Detail Modal -->
+        <div id="content-detail-modal" class="modal fixed inset-0 flex items-center justify-center bg-overlay-bg p-4 z-50 hidden transition-opacity duration-300 opacity-0">
+            <div class="modal-content relative bg-card-background rounded-lg shadow-xl overflow-hidden w-full max-w-3xl max-h-[90vh] flex flex-col">
+                <button class="modal-close-btn absolute top-3 right-3 text-white text-3xl font-bold z-10 bg-dark-background rounded-full w-10 h-10 flex items-center justify-center hover:bg-light-grey transition-colors duration-200">
+                    &times;
+                </button>
+                <div class="modal-header relative w-full overflow-hidden">
+                    <img id="modal-backdrop" src="https://via.placeholder.com/1280x720?text=Movie+Backdrop" alt="Backdrop" class="w-full h-full object-cover">
+                    <div class="modal-header-overlay absolute inset-0"></div>
+                    <div class="modal-title-container absolute bottom-0 left-0 p-8 z-10">
+                        <h2 id="modal-title" class="modal-title text-text-color font-bold mb-2">Movie Title</h2>
+                        <div class="flex items-center space-x-4 mb-4">
+                            <span id="modal-year" class="text-light-grey text-lg"></span>
+                            <span id="modal-runtime" class="text-light-grey text-lg"></span>
+                        </div>
+                        <div class="modal-actions flex space-x-4">
+                            <button class="play-btn bg-white text-dark-background px-6 py-2 rounded-md font-semibold flex items-center space-x-2 hover:bg-light-grey transition-colors duration-200">
+                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v8a1 1 0 001.555.832l6-4a1 1 0 000-1.664l-6-4z" clip-rule="evenodd"></path></svg>
+                                <span>Play</span>
+                            </button>
+                            <button id="add-to-list-btn" class="bg-card-background text-text-color px-6 py-2 rounded-md font-semibold flex items-center space-x-2 hover:bg-light-grey hover:text-dark-background transition-colors duration-200">
+                                <span id="add-to-list-text">Add to My List</span>
+                                <svg id="add-to-list-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-content-area p-8 overflow-y-auto custom-scrollbar flex-grow">
+                    <p id="modal-plot" class="text-light-grey mb-4"></p>
+                    <div class="modal-meta mb-4">
+                        <p><strong class="text-text-color">Genre:</strong> <span id="modal-genre" class="text-light-grey"></span></p>
+                        <p><strong class="text-text-color">Director:</strong> <span id="modal-director" class="text-light-grey"></span></p>
+                        <p><strong class="text-text-color">Actors:</strong> <span id="modal-actors" class="text-light-grey"></span></p>
+                        <p><strong class="text-text-color">IMDb Rating:</strong> <span id="modal-imdb-rating" class="text-light-grey"></span></p>
+                    </div>
+                    <!-- For Series: Episodes section -->
+                    <div id="modal-episodes-section" class="hidden mt-6">
+                        <h3 class="text-xl font-bold mb-3">Episodes</h3>
+                        <div id="modal-seasons-dropdown" class="mb-4">
+                            <label for="season-select" class="block text-light-grey mb-2">Select Season:</label>
+                            <select id="season-select" class="bg-card-background text-text-color p-2 rounded-md w-full md:w-auto">
+                                <!-- Options will be populated by JS -->
+                            </select>
+                        </div>
+                        <div id="episodes-list" class="space-y-3">
+                            <!-- Episodes will be populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay and Spinner -->
+        <div id="loading-overlay" class="fixed inset-0 bg-dark-background flex items-center justify-center z-[100] transition-opacity duration-300 opacity-0 invisible">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer bg-dark-background py-8 px-4 md:px-8 lg:px-16 text-center text-light-grey text-sm">
+            <div class="footer-links flex flex-wrap justify-center gap-x-4 gap-y-2 mb-4">
+                <a href="#policies" class="hover:underline" data-page="policies">FAQ</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Help Center</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Account</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Media Center</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Investor Relations</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Jobs</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Privacy</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Legal Notices</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Cookie Preferences</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Corporate Information</a>
+                <a href="#policies" class="hover:underline" data-page="policies">Contact Us</a>
+            </div>
+            <p>&copy; 2025 Netflix Clone by Saketh. All Rights Reserved.</p>
+        </footer>
+
+    </div>
+
+    <!-- Link to your external JavaScript file -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,888 @@
+/* style.css - Netflix Clone Styling (Refined for Netflix-like Visuals - Latest) */
+
+/* --- Root Variables for Theming --- */
+:root {
+    --netflix-red: #E50914;
+    --dark-background: #141414;
+    --card-background: #1a1a1a; /* Slightly darker for more contrast */
+    --text-color: #FFFFFF;
+    --light-grey: #a0a0a0;
+    --overlay-bg: rgba(0, 0, 0, 0.7);
+    --border-radius-sm: 4px; /* Small for cards/buttons */
+    --border-radius-md: 8px; /* Medium for modals */
+
+    /* Gradients for hero and modals */
+    --gradient-overlay-start: rgba(20, 20, 20, 0.0); /* Transparent start */
+    --gradient-overlay-middle: rgba(20, 20, 20, 0.5); /* Semi-transparent middle */
+    --gradient-overlay-end: rgba(20, 20, 20, 1.0);   /* Opaque end matching background */
+
+    --modal-header-gradient-start: rgba(0, 0, 0, 0.0);
+    --modal-header-gradient-end: rgba(0, 0, 0, 0.8);
+}
+
+/* --- Global Body and HTML Reset --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--dark-background);
+    color: var(--text-color);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh; /* Ensure body takes full height */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Ensure app-container takes available space */
+#app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Minimum height for the app container */
+}
+
+main {
+    flex-grow: 1; /* Allow main content to grow and push footer down */
+    padding-top: 4.5rem; /* Space for fixed header, slightly reduced for tighter look */
+}
+
+/* Custom Scrollbar for better aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px; /* For horizontal scrollbars */
+}
+
+::-webkit-scrollbar-track {
+    background: var(--card-background);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--light-grey);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--light-grey) var(--card-background); /* Firefox */
+}
+
+/* --- Header & Navigation --- */
+header {
+    background-color: var(--dark-background);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.4s ease; /* Smooth transition for scrolled state */
+}
+
+header.scrolled {
+    background-color: rgba(0, 0, 0, 0.95); /* More opaque when scrolled */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6); /* Slightly more prominent shadow */
+}
+
+#main-nav li a, #mobile-nav li a {
+    position: relative;
+    padding-bottom: 0.25rem;
+    font-weight: 500; /* Medium weight for navigation */
+    color: var(--light-grey); /* Default grey text */
+    transition: color 0.2s ease;
+}
+
+#main-nav li a:hover, #mobile-nav li a:hover {
+    color: var(--text-color); /* White on hover */
+}
+
+/* Active link underline (Netflix style) */
+#main-nav li a.active, #mobile-nav li a.active {
+    color: var(--text-color); /* Keep active link white */
+    font-weight: 700; /* Make active link bolder */
+}
+#main-nav li a.active::after, #mobile-nav li a.active::after {
+    content: '';
+    position: absolute;
+    left: 50%; /* Start from center */
+    transform: translateX(-50%); /* Center the underline */
+    bottom: 0;
+    width: 80%; /* Shorter underline */
+    height: 2px;
+    background-color: var(--netflix-red);
+    transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+#main-nav li a:not(.active)::after, #mobile-nav li a:not(.active)::after {
+    width: 0; /* No underline for non-active links */
+}
+
+
+/* Search Bar Transition */
+#search-bar {
+    background-color: var(--card-background);
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
+    border-radius: var(--border-radius-sm);
+    transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out, padding 0.3s ease-in-out;
+    width: 0; /* Hidden by default */
+    overflow: hidden;
+    opacity: 0;
+    padding: 0; /* No padding when hidden */
+}
+#search-bar.active {
+    width: 240px; /* Wider search bar */
+    opacity: 1;
+    padding: 0.5rem 0.75rem; /* Add padding when active */
+}
+#search-input {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-color);
+    width: 100%;
+    font-size: 1rem;
+    padding: 0;
+}
+#search-input::placeholder {
+    color: var(--light-grey);
+}
+#clear-search-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--light-grey);
+    padding: 0.2rem;
+    margin-left: 0.5rem;
+    transition: color 0.2s ease;
+}
+#clear-search-btn:hover {
+    color: var(--text-color);
+}
+
+/* Mobile Nav Transition */
+#mobile-nav {
+    transition: max-height 0.4s ease-in-out, padding-top 0.4s ease-in-out, padding-bottom 0.4s ease-in-out;
+    max-height: 0;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.9); /* Slightly more opaque */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+#mobile-nav.active {
+    max-height: 300px; /* Sufficient height to show all items */
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+#mobile-nav li a {
+    font-size: 1.1rem;
+    padding: 0.5rem 0;
+    width: 100%;
+    text-align: center;
+}
+
+/* --- Pages Transitions --- */
+.page {
+    min-height: calc(100vh - 4.5rem); /* Adjust for header height */
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out; /* Slower, smoother transition */
+    display: none; /* Hidden by default */
+}
+.page.active {
+    opacity: 1;
+    transform: translateY(0);
+    display: block; /* Show active page */
+}
+#home-page {
+    min-height: auto; /* Let content define height for home */
+}
+
+/* --- Hero Section (The Netflix Banner) --- */
+#hero-section {
+    position: relative;
+    width: 100%;
+    min-height: 85vh; /* Increased min-height for more impact */
+    max-height: 100vh; /* Ensure it doesn't exceed viewport height if content is short */
+    display: flex; /* Flexbox for content positioning */
+    align-items: flex-end; /* Align content to bottom */
+    padding-bottom: 5rem; /* Space for content above fade */
+    background-color: black; /* Solid fallback */
+    overflow: hidden; /* Crucial for carousel */
+    /* background-image transition removed, handled by JS for slides */
+}
+
+#hero-carousel-container {
+    position: absolute;
+    inset: 0; /* Top, right, bottom, left 0 */
+    width: 100%;
+    height: 100%;
+    display: flex; /* This now acts as the container for slides */
+    z-index: 0; /* Behind content */
+}
+
+.hero-slide {
+    position: absolute; /* Position slides on top of each other */
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0; /* Hidden by default */
+    transition: opacity 1.2s ease-in-out; /* Slower, more cinematic fade */
+}
+
+.hero-slide.active {
+    opacity: 1; /* Only active slide is visible */
+}
+
+/* Overlay gradient for hero section */
+#hero-section .bg-gradient-to-t {
+    background-image: linear-gradient(to top, var(--gradient-overlay-end) 0%, var(--gradient-overlay-middle) 50%, var(--gradient-overlay-start) 100%);
+    position: absolute;
+    inset: 0;
+    z-index: 1; /* Above slides, below content */
+}
+
+.hero-content {
+    position: relative; /* Position over the gradient and slides */
+    z-index: 10; /* Ensure content is on top */
+    padding: 1.5rem; /* Base padding */
+    width: 100%; /* Full width */
+    max-width: 800px; /* Constrain content width */
+    margin-left: 1rem; /* Adjust padding for mobile */
+    /* Ensure content is positioned logically above the bottom fade */
+    margin-bottom: 7rem; /* Increased margin to move content higher after plot removal */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align text to the left */
+}
+
+.hero-title {
+    font-size: 2.5rem; /* Adjusted for better mobile fit */
+    line-height: 1.1;
+    text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7); /* Stronger text shadow */
+    margin-bottom: 1.5rem; /* Space below title before buttons */
+    font-weight: 800; /* Extra bold */
+}
+
+.hero-plot {
+    /* Hidden as per user request */
+    display: none;
+}
+
+/* Hero Buttons */
+#hero-play-btn, #hero-more-info-btn {
+    padding: 0.7rem 1.8rem; /* Adjusted for mobile compactness */
+    font-size: 1rem; /* Adjusted for mobile compactness */
+    font-weight: 700;
+    border-radius: var(--border-radius-sm);
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+    cursor: pointer;
+    display: inline-flex; /* Use inline-flex for button content alignment */
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem; /* Space between icon and text */
+}
+
+#hero-play-btn {
+    background-color: var(--text-color);
+    color: var(--dark-background);
+}
+#hero-play-btn:hover {
+    background-color: rgba(255, 255, 255, 0.8);
+    transform: scale(1.02); /* Slight scale on hover */
+}
+
+#hero-more-info-btn {
+    background-color: rgba(109, 109, 110, 0.7); /* Netflix grey */
+    color: var(--text-color);
+}
+#hero-more-info-btn:hover {
+    background-color: rgba(109, 109, 110, 0.9);
+    transform: scale(1.02); /* Slight scale on hover */
+}
+
+/* Hero Navigation Arrows (Removed - keep these rules for safety if needed, but display: none) */
+.hero-nav-arrow {
+    display: none; /* Explicitly hide arrows */
+}
+
+/* Hero Pagination Dots */
+#hero-dots-container {
+    display: flex;
+    justify-content: center;
+    position: absolute;
+    bottom: 1rem; /* Adjusted for mobile */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+}
+
+.hero-dot {
+    width: 8px; /* Slightly smaller dots */
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white */
+    border-radius: 50%;
+    margin: 0 4px; /* Reduced spacing */
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.hero-dot.active {
+    background-color: var(--netflix-red); /* Netflix red for active dot */
+    transform: scale(1.4); /* Slightly larger active dot */
+}
+
+/* --- Content Rows (Horizontal Scroll) --- */
+.content-row {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem 0.5rem 1rem 0.5rem; /* Adjusted padding for tighter mobile layout */
+    display: flex;
+    flex-wrap: nowrap; /* Ensure no wrapping for horizontal scroll */
+    gap: 0.5rem; /* Reduced space between cards for compactness */
+    overflow-x: scroll; /* Enable horizontal scrolling */
+    /* box-shadow removed as per request to remove line below categories */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+/* Hide scrollbar for webkit browsers (Chrome, Safari) */
+.content-row::-webkit-scrollbar {
+    display: none;
+}
+
+
+.content-row > * {
+    scroll-snap-align: start;
+    flex-shrink: 0; /* Prevent items from shrinking */
+}
+
+.section-title {
+    padding-left: 0.5rem; /* Adjusted for tighter mobile layout */
+    padding-right: 0.5rem;
+    margin-bottom: 0.8rem; /* Slightly reduced margin */
+    font-weight: 700; /* Bold title */
+    font-size: 1.4rem; /* Adjusted for mobile */
+}
+
+/* --- Content Cards (The Core Netflix Thumbnail) --- */
+.content-card {
+    position: relative;
+    background-color: var(--card-background);
+    border-radius: var(--border-radius-sm); /* Rounded corners */
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out, z-index 0.3s ease;
+    /* Fixed 2:3 aspect ratio using padding-bottom hack for more reliable sizing */
+    width: 110px; /* Base width for mobile, made more compact */
+    padding-bottom: calc(110px * 1.5); /* 2:3 aspect ratio (width * 1.5) */
+    height: 0; /* Set height to 0 for padding-bottom hack to work */
+}
+
+.content-card img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensures image covers the area, cropping if necessary */
+    border-radius: var(--border-radius-sm);
+}
+
+.content-card:hover {
+    transform: scale(1.15); /* More significant scale on hover */
+    z-index: 10; /* Bring to front on hover */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7); /* Deeper shadow */
+    position: relative; /* Ensure it stacks above others properly */
+}
+
+
+.content-card-overlay {
+    background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    border-radius: var(--border-radius-sm);
+    display: flex;
+    flex-direction: column; /* Stack title and button */
+    align-items: flex-start; /* Align text to left */
+    justify-content: flex-end; /* Push content to bottom */
+    position: absolute;
+    inset: 0;
+    padding: 0.5rem; /* Padding for text inside overlay */
+}
+
+.content-card:hover .content-card-overlay {
+    opacity: 1;
+}
+
+.content-card-overlay h3 {
+    font-size: 0.8rem; /* Slightly smaller title on cards for compactness */
+    line-height: 1.3;
+    max-height: 3.9em; /* Limit to 3 lines */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    font-weight: 600; /* Slightly bolder title */
+    margin-bottom: 0.25rem; /* Space between title and button group */
+}
+
+/* Container for action buttons on card hover */
+.card-action-buttons {
+    display: flex;
+    gap: 0.25rem; /* Small gap between buttons */
+    margin-top: 0; /* Remove margin from individual buttons, apply to this container if needed */
+}
+
+/* Add to My List button on card hover */
+.content-card-add-btn,
+.content-card-info-btn { /* Apply common styles */
+    background: rgba(40, 40, 40, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.content-card-add-btn:hover,
+.content-card-info-btn:hover {
+    background-color: rgba(60, 60, 60, 0.9);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+.content-card-add-btn svg,
+.content-card-info-btn svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text-color);
+}
+
+
+/* NETFLIX ORIGINAL Label Styling */
+.netflix-original-label {
+    background-color: var(--netflix-red);
+    color: var(--text-color);
+    font-size: 0.55rem; /* Even smaller font size for mobile */
+    font-weight: 700; /* Bold */
+    padding: 0.1rem 0.3rem; /* Smaller padding */
+    border-radius: 2px;
+    position: absolute;
+    top: 4px; /* Reduced distance from top */
+    left: 4px; /* Reduced distance from left */
+    z-index: 10;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5); /* Subtle shadow for readability */
+}
+
+
+/* --- Content Grid (Wrap Layout for Movies/Series Pages, My List) --- */
+.content-grid {
+    display: grid; /* Use grid for wrapping layout */
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); /* Base grid for small screens, adjusted for compactness */
+    gap: 0.8rem; /* Gap between grid items, adjusted for compactness */
+    padding: 0 0.5rem; /* Horizontal padding for the grid, adjusted */
+}
+
+.content-grid .content-card {
+    width: 100%; /* Take full column width */
+    height: 0; /* Reset height for aspect ratio hack */
+    padding-bottom: 150%; /* 2:3 aspect ratio */
+}
+
+
+/* --- Modal Styling --- */
+.modal {
+    background-color: var(--overlay-bg);
+    backdrop-filter: blur(5px); /* Subtle blur for overlay */
+    pointer-events: none; /* Allow clicks through when hidden */
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+}
+
+.modal.active {
+    pointer-events: auto; /* Enable clicks when active */
+    opacity: 1;
+}
+
+.modal-content {
+    background-color: var(--card-background);
+    border-radius: var(--border-radius-md); /* Larger border radius */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9); /* Stronger shadow */
+    overflow: hidden;
+    width: 95%; /* Max width for mobile */
+    max-width: 800px; /* Constrain max width for desktop */
+    max-height: 90vh; /* Max height to fit viewport */
+    transform: translateY(20px);
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.modal.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-close-btn {
+    top: 1rem;
+    right: 1rem;
+    background-color: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(5px); /* Blur behind the button */
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+    width: 40px; /* Size */
+    height: 40px;
+    font-size: 2rem; /* Larger X */
+    line-height: 1; /* Center X */
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+.modal-close-btn:hover {
+    background-color: rgba(50, 50, 50, 0.9); /* Darker on hover */
+    transform: scale(1.05);
+}
+
+.modal-header {
+    height: 280px; /* Default height for modal header backdrop */
+    position: relative;
+    background-color: black; /* Fallback */
+    overflow: hidden;
+}
+.modal-header img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+.modal-header-overlay {
+    background: linear-gradient(to top, var(--modal-gradient-end) 0%, var(--modal-gradient-start) 50%);
+    position: absolute;
+    inset: 0;
+}
+
+.modal-title-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1.5rem;
+    background: linear-gradient(to top, var(--modal-gradient-end) 0%, transparent 100%);
+    z-index: 1; /* Above the backdrop */
+}
+
+.modal-title {
+    font-size: 2rem;
+    line-height: 1.2;
+    font-weight: 700;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+}
+.modal-meta span {
+    font-size: 0.95rem;
+    color: var(--light-grey);
+    font-weight: 500;
+}
+
+.modal-actions {
+    margin-top: 1rem;
+}
+
+/* Play and Add to List Buttons (in modal) */
+.play-btn, #add-to-list-btn {
+    padding: 0.7rem 1.8rem; /* Slightly larger for modal */
+    font-size: 1rem;
+    border-radius: var(--border-radius-sm);
+    white-space: nowrap;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.1s ease;
+}
+.play-btn {
+    background-color: var(--text-color);
+    color: var(--dark-background);
+}
+.play-btn:hover {
+    background-color: rgba(255, 255, 255, 0.8);
+    transform: scale(1.02);
+}
+#add-to-list-btn {
+    background-color: rgba(109, 109, 110, 0.7);
+    color: var(--text-color);
+}
+#add-to-list-btn:hover {
+    background-color: rgba(109, 109, 110, 0.9);
+    transform: scale(1.02);
+}
+
+.modal-content-area {
+    padding: 2rem;
+    overflow-y: auto; /* Enable scrolling for modal content */
+    flex-grow: 1; /* Allow content area to take available space */
+}
+.modal-content-area p strong {
+    color: var(--text-color);
+    font-weight: 600;
+}
+.modal-content-area p {
+    font-size: 1rem;
+    color: var(--light-grey);
+    margin-bottom: 0.75rem;
+}
+
+
+/* --- Footer --- */
+footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: var(--dark-background);
+    padding: 2.5rem 1rem; /* More vertical padding */
+    text-align: center;
+    color: var(--light-grey);
+    font-size: 0.85rem;
+}
+.footer-links {
+    margin-bottom: 1.5rem;
+    gap: 0.75rem 1.5rem; /* Row and column gap */
+}
+.footer-links a {
+    color: var(--light-grey);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+.footer-links a:hover {
+    color: var(--text-color);
+    text-decoration: underline;
+}
+
+
+/* --- Loading Spinner --- */
+#loading-overlay {
+    background-color: var(--dark-background); /* Dark background for the overlay */
+    transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+    z-index: 999; /* Ensure it's on top of everything */
+}
+#loading-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+.spinner {
+    border: 5px solid rgba(255, 255, 255, 0.2);
+    border-top: 5px solid var(--netflix-red);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
+/* --- Responsive Design --- */
+@media (min-width: 640px) { /* sm */
+    main {
+        padding-top: 5rem;
+    }
+    .hero-title {
+        font-size: 3.5rem;
+    }
+    /* .hero-plot is hidden */
+    .hero-content {
+        margin-left: 2rem; /* Adjusted padding for tablet */
+        margin-bottom: 8rem; /* Further adjust margin for content above fade */
+    }
+    .section-title {
+        padding-left: 2rem;
+        font-size: 1.6rem;
+    }
+    .content-row {
+        padding-left: 2rem;
+        padding-right: 2rem;
+        gap: 0.75rem; /* Adjusted gap */
+    }
+    .content-card {
+        width: 130px; /* Adjusted for tablet */
+        padding-bottom: calc(130px * 1.5);
+    }
+    .content-grid {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); /* Adjusted for tablet */
+        gap: 1rem;
+        padding: 0 2rem;
+    }
+    .modal-content {
+        max-width: 700px;
+    }
+    .modal-header {
+        height: 320px;
+    }
+    .modal-title {
+        font-size: 2.5rem;
+    }
+    .netflix-original-label {
+        font-size: 0.65rem; /* Adjusted for tablet */
+        padding: 0.15rem 0.4rem;
+        top: 6px;
+        left: 6px;
+    }
+    .content-card-overlay h3 {
+        font-size: 0.9rem;
+    }
+    .content-card-add-btn,
+    .content-card-info-btn {
+        width: 35px;
+        height: 35px;
+    }
+    .content-card-add-btn svg,
+    .content-card-info-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+@media (min-width: 768px) { /* md */
+    main {
+        padding-top: 5rem; /* Consistent header spacing */
+    }
+    .hero-title {
+        font-size: 4rem;
+    }
+    /* .hero-plot is hidden */
+    .hero-content {
+        padding: 2rem; /* More padding for larger screens */
+        margin-left: 3rem; /* Adjusted padding for desktop */
+        margin-bottom: 9rem; /* Further adjust margin for content above fade */
+    }
+    .section-title {
+        font-size: 1.8rem;
+        padding-left: 3rem;
+    }
+    .content-row {
+        padding-left: 3rem;
+        padding-right: 3rem;
+        gap: 1rem;
+    }
+    .content-card {
+        width: 150px; /* Adjusted for desktop */
+        padding-bottom: calc(150px * 1.5);
+    }
+    .content-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Adjusted for desktop */
+        gap: 1.2rem;
+        padding: 0 3rem;
+    }
+    .modal-content {
+        max-width: 850px;
+    }
+    .modal-header {
+        height: 380px;
+    }
+    .modal-title {
+        font-size: 3rem;
+    }
+    .netflix-original-label {
+        font-size: 0.7rem; /* Adjusted for desktop */
+        padding: 0.2rem 0.5rem;
+    }
+    .content-card-overlay h3 {
+        font-size: 1rem;
+    }
+}
+
+@media (min-width: 1024px) { /* lg */
+    .hero-title {
+        font-size: 4.8rem;
+    }
+    /* .hero-plot is hidden */
+    .hero-content {
+        padding: 2.5rem;
+        margin-left: 4rem;
+        margin-bottom: 10rem; /* Further adjust margin for content above fade */
+    }
+    .section-title {
+        font-size: 2rem;
+        padding-left: 4rem;
+    }
+    .content-row {
+        padding-left: 4rem;
+        padding-right: 4rem;
+        gap: 1.2rem;
+    }
+    .content-card {
+        width: 170px; /* Adjusted for larger desktop */
+        padding-bottom: calc(170px * 1.5);
+    }
+    .content-grid {
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); /* Adjusted for larger desktop */
+        gap: 1.5rem;
+        padding: 0 4rem;
+    }
+    .modal-content {
+        max-width: 950px;
+    }
+    .modal-header {
+        height: 450px;
+    }
+    .modal-title {
+        font-size: 3.5rem;
+    }
+    .netflix-original-label {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+    }
+}
+
+@media (min-width: 1280px) { /* xl */
+    .hero-title {
+        font-size: 5.5rem;
+    }
+    /* .hero-plot is hidden */
+    .hero-content {
+        padding: 3rem;
+        margin-left: 5rem;
+        margin-bottom: 12rem; /* Further adjust margin for content above fade */
+    }
+    .section-title {
+        font-size: 2.2rem;
+        padding-left: 5rem;
+    }
+    .content-row {
+        padding-left: 5rem;
+        padding-right: 5rem;
+        gap: 1.5rem;
+    }
+    .content-card {
+        width: 190px; /* Adjusted for XL desktop */
+        padding-bottom: calc(190px * 1.5);
+    }
+    .content-grid {
+        grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); /* Adjusted for XL desktop */
+        gap: 1.8rem;
+        padding: 0 5rem;
+    }
+    .modal-content {
+        max-width: 1050px;
+    }
+    .modal-header {
+        height: 500px;
+    }
+    .modal-title {
+        font-size: 4rem;
+    }
+}
