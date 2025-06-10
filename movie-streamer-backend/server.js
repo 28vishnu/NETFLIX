@@ -3,123 +3,199 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const axios = require('axios');
+const path = require('path'); // Added: Node.js path module for robust path resolution
 require('dotenv').config(); // Load environment variables from .env file
 
 // --- MongoDB Models ---
-// Ensure these model files exist in movie-streamer-backend/models/
-// You will need to create/ensure existence of:
-// - Movie.js
-// - Series.js
-// - UserList.js
-const Movie = require('./models/Movie');
-const Series = require('./models/Series');
-const UserList = require('./models/UserList');
+// Make sure you have these files in a 'models' directory:
+// ./models/Movie.js
+// ./models/Series.js
+// ./models/UserList.js
+// Updated: Using path.join for robust module imports
+const Movie = require(path.join(__dirname, 'models', 'Movie'));
+const Series = require(path.join(__dirname, 'models', 'Series'));
+const UserList = require(path.join(__dirname, 'models', 'UserList'));
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- MongoDB Connection ---
-// It's best practice to use process.env.MONGO_URI here
-const MONGO_URI = process.env.MONGO_URI; 
+// --- TMDB API Configuration ---
+// It's highly recommended to use an environment variable for your TMDB API Key
+const TMDB_API_KEY = process.env.TMDB_API_KEY; // Set this in your .env file or hosting env
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE_URL = 'https://image.themoviedb.org/t/p/';
 
-if (!MONGO_URI) {
-    console.error('Error: MONGO_URI is not set in your .env file.');
-    process.exit(1);
+if (!TMDB_API_KEY) {
+    console.error('SERVER ERROR: TMDB_API_KEY is not set in your environment variables. Please add it to your .env file or hosting configuration.');
+    process.exit(1); // Exit if API key is not set
 }
 
+// --- MongoDB Connection ---
+// Your MongoDB Atlas connection string
+// Consider storing this in a .env file as well for security: process.env.MONGO_URI
+const MONGO_URI = 'mongodb+srv://vishnusaketh07:NETPROOO@cluster0.yo7hthy.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+
 mongoose.connect(MONGO_URI, {
-    dbName: 'NETFLIX' // Your database name, ensure it matches
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    dbName: 'NETFLIX' // Specify your database name
 })
 .then(() => console.log('MongoDB connected successfully.'))
 .catch(err => console.error('MongoDB connection error:', err));
 
 // --- Middleware ---
-app.use(cors()); // Enables Cross-Origin Resource Sharing
-app.use(express.json()); // Parses JSON bodies of incoming requests
+app.use(cors()); // Enable CORS for all routes (important for frontend communication)
+app.use(express.json()); // Enable JSON body parsing for POST/PUT requests
+
+// --- TMDB API Helper Function ---
+async function fetchFromTmdb(endpoint, params = {}) {
+    try {
+        const response = await axios.get(`${TMDB_BASE_URL}${endpoint}`, {
+            params: {
+                api_key: TMDB_API_KEY,
+                ...params,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching from TMDB endpoint ${endpoint}:`, error.message);
+        if (error.response) {
+            console.error('TMDB API Response Error:', error.response.status, error.response.data);
+        }
+        throw new Error('Failed to fetch data from TMDB.');
+    }
+}
 
 // --- API Routes ---
 
+// Root endpoint for testing server status
 app.get('/', (req, res) => {
     res.send('Netflix Clone Backend is running!');
 });
 
-// Get all Movies from MongoDB
+// Get Trending Movies and TV Shows
+app.get('/api/trending', async (req, res) => {
+    try {
+        const trendingMovies = await fetchFromTmdb('/trending/movie/week');
+        const trendingSeries = await fetchFromTmdb('/trending/tv/week');
+        // Combine and sort by popularity, ensuring media_type is added
+        const combinedTrending = [
+            ...(trendingMovies.results || []).map(item => ({ ...item, media_type: 'movie' })),
+            ...(trendingSeries.results || []).map(item => ({ ...item, media_type: 'tv' }))
+        ].sort((a, b) => b.popularity - a.popularity);
+        res.json(combinedTrending);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get Popular Movies (Discovery)
 app.get('/api/movies', async (req, res) => {
     try {
-        // Fetch all movies, sort by creation date to simulate 'latest' or 'popular'
-        const movies = await Movie.find({}).sort({ createdAt: -1 });
-        res.json(movies);
+        const movies = await fetchFromTmdb('/discover/movie', { sort_by: 'popularity.desc', 'vote_count.gte': 50 });
+        // Add media_type to each item for consistency
+        const mappedMovies = (movies.results || []).map(item => ({ ...item, media_type: 'movie' }));
+        res.json(mappedMovies);
     } catch (error) {
-        console.error('Error fetching movies from DB:', error);
-        res.status(500).json({ message: 'Failed to fetch movies from database.' });
+        res.status(500).json({ message: error.message });
     }
 });
 
-// Get all Series from MongoDB
+// Get Top Rated Movies (for home page row)
+app.get('/api/movies/top-rated', async (req, res) => {
+    try {
+        const movies = await fetchFromTmdb('/movie/top_rated');
+        const mappedMovies = (movies.results || []).map(item => ({ ...item, media_type: 'movie' }));
+        res.json(mappedMovies);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Get Popular Series (Discovery)
 app.get('/api/series', async (req, res) => {
     try {
-        // Fetch all series, sort by creation date to simulate 'latest' or 'popular'
-        const series = await Series.find({}).sort({ createdAt: -1 });
-        res.json(series);
-    } catch (error) {
-        console.error('Error fetching series from DB:', error);
-        res.status(500).json({ message: 'Failed to fetch series from database.' });
+        const series = await fetchFromTmdb('/discover/tv', { sort_by: 'popularity.desc', 'vote_count.gte': 50 });
+        const mappedSeries = (series.results || []).map(item => ({ ...item, media_type: 'tv' }));
+        res.json(mappedSeries);
+    } catch (error) { // Fixed typo: 'funal' changed to 'catch'
+        res.status(500).json({ message: error.message });
     }
 });
 
-// Get Latest 5 Movies for Hero Banner (from MongoDB)
-app.get('/api/trending-movies', async (req, res) => {
+// Get Popular Series (for home page row)
+app.get('/api/series/popular', async (req, res) => {
     try {
-        // Fetch the 5 most recently added movies
-        const latestMovies = await Movie.find({}).sort({ createdAt: -1 }).limit(5);
-        res.json(latestMovies);
+        const series = await fetchFromTmdb('/tv/popular');
+        const mappedSeries = (series.results || []).map(item => ({ ...item, media_type: 'tv' }));
+        res.json(mappedSeries);
     } catch (error) {
-        console.error('Error fetching trending movies from DB:', error);
-        res.status(500).json({ message: 'Failed to fetch trending movies from database.' });
+        res.status(500).json({ message: error.message });
     }
 });
 
-// Get content details by IMDb ID from MongoDB
-app.get('/api/detail/:imdbID', async (req, res) => {
-    const { imdbID } = req.params;
-    try {
-        // Attempt to find in Movies collection first
-        let item = await Movie.findOne({ imdbID });
-        if (!item) {
-            // If not found in Movies, try Series collection
-            item = await Series.findOne({ imdbID });
-        }
-
-        if (item) {
-            res.json(item);
-        } else {
-            res.status(404).json({ message: 'Content not found in database.' });
-        }
-    } catch (error) {
-        console.error(`Error fetching detail for IMDb ID ${imdbID} from DB:`, error);
-        res.status(500).json({ message: 'Failed to fetch content details from database.' });
-    }
-});
-
-// Simulate Genre Categories (by filtering existing movies/series in DB)
-// This endpoint will return all movies/series, and frontend will categorize by 'Genre' field.
-// For true dynamic genre lists, you'd need a separate endpoint to return unique genre names.
+// Get all genres (combined movie and TV genres)
 app.get('/api/genres', async (req, res) => {
     try {
-        const movieGenres = await Movie.distinct('Genre'); // Get unique genres from movies
-        const seriesGenres = await Series.distinct('Genre'); // Get unique genres from series
-
-        const combinedGenres = [...movieGenres, ...seriesGenres];
-        const uniqueGenres = Array.from(new Set(combinedGenres.flatMap(g => g.split(', ').map(s => s.trim()))))
-                                  .filter(g => g); // Filter out empty strings
-        
-        // Return genres as an array of objects for consistency if needed, or just strings
-        const formattedGenres = uniqueGenres.map(name => ({ id: name.toLowerCase().replace(/\s/g, '-'), name: name }));
-
-        res.json(formattedGenres);
+        const movieGenres = await fetchFromTmdb('/genre/movie/list');
+        const tvGenres = await fetchFromTmdb('/genre/tv/list');
+        const combinedGenres = [...(movieGenres.genres || []), ...(tvGenres.genres || [])];
+        // Filter unique genres by ID
+        const uniqueGenres = Array.from(new Map(combinedGenres.map(genre => [genre.id, genre])).values());
+        res.json(uniqueGenres);
     } catch (error) {
-        console.error('Error fetching genres from DB:', error);
-        res.status(500).json({ message: 'Failed to fetch genres from database.' });
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+// Get Detailed Movie/Series Information (from TMDB, enhanced with MongoDB if available)
+app.get('/api/detail/:mediaType/:tmdbId', async (req, res) => {
+    const { mediaType, tmdbId } = req.params;
+    let tmdbData;
+    let mongoData = null;
+
+    try {
+        if (mediaType === 'movie') {
+            tmdbData = await fetchFromTmdb(`/movie/${tmdbId}`, { append_to_response: 'credits,videos' });
+            mongoData = await Movie.findOne({ tmdb_id: tmdbId }); // Look for custom movie data in MongoDB
+        } else if (mediaType === 'series') {
+            tmdbData = await fetchFromTmdb(`/tv/${tmdbId}`, { append_to_response: 'credits,videos' });
+            mongoData = await Series.findOne({ tmdb_id: tmdbId }); // Look for custom series data in MongoDB
+        } else {
+            return res.status(400).json({ message: 'Invalid media type. Must be "movie" or "series".' });
+        }
+
+        // Combine data: TMDB data is primary, MongoDB data overrides/adds specific fields
+        const combinedData = { ...tmdbData, media_type: mediaType }; // Ensure media_type is present
+
+        if (mongoData) {
+            // Examples of fields you might override or add from MongoDB:
+            if (mongoData.plot) combinedData.overview = mongoData.plot; // Override TMDB overview if custom plot exists
+            if (mongoData.director) combinedData.director_custom = mongoData.director; // Add a custom director field
+            if (mongoData.isNetflixOriginal !== undefined) {
+                combinedData.isNetflixOriginal = mongoData.isNetflixOriginal; // Add or override Netflix Original flag
+            }
+            // You can add more fields here based on your MongoDB schema and needs
+        }
+
+        res.json(combinedData);
+
+    } catch (error) {
+        console.error(`Error fetching details for ${mediaType} ${tmdbId}:`, error.message);
+        res.status(500).json({ message: 'Failed to fetch detailed content. ' + error.message });
+    }
+});
+
+// Get Episodes for a TV series season
+app.get('/api/episodes/:tmdbId/:seasonNumber', async (req, res) => {
+    const { tmdbId, seasonNumber } = req.params;
+    try {
+        const seasonDetails = await fetchFromTmdb(`/tv/${tmdbId}/season/${seasonNumber}`);
+        res.json(seasonDetails.episodes || []);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to fetch episodes. ' + error.message });
     }
 });
 
@@ -132,7 +208,6 @@ app.get('/api/mylist/:userId', async (req, res) => {
     try {
         let userList = await UserList.findOne({ userId });
         if (!userList) {
-            // If user's list doesn't exist, create an empty one
             userList = new UserList({ userId, items: [] });
             await userList.save();
         }
@@ -144,16 +219,9 @@ app.get('/api/mylist/:userId', async (req, res) => {
 });
 
 // Add Item to My List
-app.post('/api/mylist/:userId/:imdbID', async (req, res) => {
-    const { userId, imdbID } = req.params;
-    // The req.body should contain the full item data for My List.
-    // The frontend will send the OMDb data for the item.
-    const itemToAdd = req.body;
-
-    // Ensure itemToAdd has required fields (at least imdbID and Type)
-    if (!itemToAdd || !itemToAdd.imdbID || !itemToAdd.Type) {
-        return res.status(400).json({ message: 'Invalid item data provided for My List.' });
-    }
+app.post('/api/mylist/:userId/:mediaType/:tmdbId', async (req, res) => {
+    const { userId, mediaType, tmdbId } = req.params;
+    const { title, poster_path, backdrop_path, overview, release_date, first_air_date, vote_average, genre_ids } = req.body;
 
     try {
         let userList = await UserList.findOne({ userId });
@@ -161,11 +229,21 @@ app.post('/api/mylist/:userId/:imdbID', async (req, res) => {
             userList = new UserList({ userId, items: [] });
         }
 
-        // Check if item already exists in the user's list
-        const existingItemIndex = userList.items.findIndex(item => item.imdbID === imdbID);
+        const existingItemIndex = userList.items.findIndex(item => item.tmdb_id === tmdbId && item.media_type === mediaType);
 
         if (existingItemIndex === -1) {
-            userList.items.push(itemToAdd);
+            userList.items.push({
+                tmdb_id: tmdbId,
+                media_type: mediaType,
+                title: title,
+                poster_path: poster_path,
+                backdrop_path: backdrop_path,
+                overview: overview,
+                release_date: release_date,
+                first_air_date: first_air_date,
+                vote_average: vote_average,
+                genre_ids: genre_ids,
+            });
             await userList.save();
             res.status(201).json({ message: 'Item added to My List.', items: userList.items });
         } else {
@@ -178,8 +256,8 @@ app.post('/api/mylist/:userId/:imdbID', async (req, res) => {
 });
 
 // Remove Item from My List
-app.delete('/api/mylist/:userId/:imdbID', async (req, res) => {
-    const { userId, imdbID } = req.params;
+app.delete('/api/mylist/:userId/:mediaType/:tmdbId', async (req, res) => {
+    const { userId, mediaType, tmdbId } = req.params;
     try {
         const userList = await UserList.findOne({ userId });
         if (!userList) {
@@ -187,7 +265,7 @@ app.delete('/api/mylist/:userId/:imdbID', async (req, res) => {
         }
 
         const initialLength = userList.items.length;
-        userList.items = userList.items.filter(item => item.imdbID !== imdbID);
+        userList.items = userList.items.filter(item => !(item.tmdb_id === tmdbId && item.media_type === mediaType));
 
         if (userList.items.length < initialLength) {
             await userList.save();

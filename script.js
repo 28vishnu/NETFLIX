@@ -3,7 +3,7 @@
 // --- Configuration ---
 // IMPORTANT: Update this BASE_BACKEND_URL to your backend's address
 // If running locally, it's typically 'http://localhost:5000'
-const BASE_BACKEND_URL = 'http://localhost:5000'; // <--- UPDATE THIS URL (e.g., if you deploy it) ---
+const BASE_BACKEND_URL = 'https://netflix-1-137e.onrender.com'; // <--- UPDATED THIS URL ---
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/'; // Base URL for TMDB images
 
 // Constants for dynamic genre row filtering
