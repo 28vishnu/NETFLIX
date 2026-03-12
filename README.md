@@ -1,4 +1,4 @@
-# Netflix Desktop Clone (Cinematic Edition) 🎬
+# Netflix Clone 🎬
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Vanilla JS](https://img.shields.io/badge/JavaScript-ES6+-f7df1e.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
