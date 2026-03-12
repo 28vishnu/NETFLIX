@@ -4,7 +4,20 @@
 [![Vanilla JS](https://img.shields.io/badge/JavaScript-ES6+-f7df1e.svg)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.0+-38bdf8.svg)](https://tailwindcss.com/)
 
+<p align="center">
+  <img src="assets/billboard.jpg" alt="Netflix Clone Hero Billboard" width="100%">
+</p>
+
 A high-fidelity, pixel-perfect recreation of the Netflix Desktop experience. Built with **Vanilla JavaScript** and **Tailwind CSS**, this project replicates the sophisticated UI/UX of the world’s leading streaming platform with dynamic data handling and smooth cinematic transitions.
+
+---
+
+## 📸 Interface Showcase
+
+| 🏆 Top 10 Ranking System | 🔍 Smart Search Interface |
+| :---: | :---: |
+| <img src="assets/top10.jpg" width="400"> | <img src="assets/search.jpg" width="400"> |
+| *Iconic outlined typography with overlapping poster logic.* | *Debounced search engine with cinematic mini-modal hovers.* |
 
 ---
 
